@@ -61,7 +61,8 @@ export default function DoctorDashboard() {
       const socket = io(`${SOCKET_URL}/call`,{
         transports:["websocket","polling"],
         reconnection: true,
-        reconnectionAttempts: 5,
+        reconnectionAttempts: 3,
+        timeout: 5000,
       });
       socketRef.current = socket;
 
@@ -78,6 +79,10 @@ export default function DoctorDashboard() {
       });
 
       socket.on("disconnect",()=>setSocketStatus("disconnected"));
+      // Timeout - if not connected in 6 sec, show manual option
+      setTimeout(()=>{
+        if(!socket.connected) setSocketStatus("failed");
+      }, 6000);
 
       socket.on("call:incoming",(data:any)=>{
         console.log("📞 Incoming call from:", data.patientName);
@@ -215,9 +220,20 @@ export default function DoctorDashboard() {
                   </div>
                 ):(
                   <div style={{textAlign:"center",padding:"32px 20px"}}>
-                    <p style={{fontSize:32,marginBottom:8}}>🔄</p>
-                    <p style={{color:"#FFB347",fontWeight:700,fontSize:14}}>Connecting...</p>
-                    <p style={{color:"rgba(232,244,255,0.4)",fontSize:12,marginTop:4}}>Setting up your connection</p>
+                    {socketStatus==="failed"?(
+                      <>
+                        <p style={{fontSize:32,marginBottom:8}}>⚠️</p>
+                        <p style={{color:"#FFB347",fontWeight:700,fontSize:14}}>Backend Connecting...</p>
+                        <p style={{color:"rgba(232,244,255,0.4)",fontSize:12,marginTop:4,marginBottom:14}}>You are online. Patients can call you.</p>
+                        <button onClick={()=>connectSocket(user)} style={{padding:"10px 20px",borderRadius:11,background:"linear-gradient(135deg,#00C9A7,#0B6FCC)",color:"white",fontWeight:700,fontSize:12,border:"none",cursor:"pointer",fontFamily:"inherit"}}>Retry Connection</button>
+                      </>
+                    ):(
+                      <>
+                        <p style={{fontSize:32,marginBottom:8}}>🔄</p>
+                        <p style={{color:"#FFB347",fontWeight:700,fontSize:14}}>Connecting...</p>
+                        <p style={{color:"rgba(232,244,255,0.4)",fontSize:12,marginTop:4}}>Setting up your connection</p>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
