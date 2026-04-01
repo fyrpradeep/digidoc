@@ -17,41 +17,39 @@ export class AuthService {
     private cfg: ConfigService,
   ) {}
 
-  private clean(mobile: string) { return mobile.replace(/\D/g, '').slice(-10); }
+  private clean(m: string) { return m.replace(/\D/g,'').slice(-10); }
 
   async sendOtp(mobile: string) {
     const num = this.clean(mobile);
-    if (num.length < 10) throw new BadRequestException('Invalid mobile number');
+    if (num.length < 10) throw new BadRequestException('Invalid mobile');
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     await this.otpRepo.delete({ mobile: num });
-    await this.otpRepo.save({ mobile: num, otp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) });
+    await this.otpRepo.save({ mobile: num, otp, expiresAt: new Date(Date.now() + 10*60*1000) });
     console.log(`📱 OTP [${num}]: ${otp}`);
-    // TODO: SMS via MSG91
     return { message: 'OTP sent', dev_otp: process.env.NODE_ENV !== 'production' ? otp : undefined };
   }
 
   async verifyOtp(mobile: string, otp: string) {
     const num = this.clean(mobile);
     const rec = await this.otpRepo.findOne({ where: { mobile: num } });
-    if (!rec) throw new BadRequestException('Send OTP first');
+    if (!rec) throw new BadRequestException('Request OTP first');
     if (rec.otp !== otp) throw new UnauthorizedException('Wrong OTP');
     if (new Date() > rec.expiresAt) throw new BadRequestException('OTP expired');
     await this.otpRepo.delete({ mobile: num });
-
-    // Check existing patient
     const patient = await this.patientRepo.findOne({ where: { mobile: num } });
     if (patient) {
-      const token = this.jwt.sign({ sub: patient.id, role: 'patient', mobile: num });
-      return { token, user: patient, role: 'patient', isNew: false };
+      return { token: this.jwt.sign({ sub: patient.id, role: 'patient' }), user: patient, role: 'patient', isNew: false };
     }
-    // Check existing doctor
     const doctor = await this.doctorRepo.findOne({ where: { mobile: num } });
     if (doctor) {
-      const token = this.jwt.sign({ sub: doctor.id, role: 'doctor', mobile: num });
-      return { token, user: doctor, role: 'doctor', isNew: false };
+      return { token: this.jwt.sign({ sub: doctor.id, role: 'doctor' }), user: doctor, role: 'doctor', isNew: false };
     }
-    // New user
     return { token: null, user: null, role: null, isNew: true };
+  }
+
+  // Both names work — controller may call either
+  async completeRegistration(mobile: string, role: 'patient'|'doctor', name: string) {
+    return this.register(mobile, role, name);
   }
 
   async register(mobile: string, role: 'patient'|'doctor', name: string) {
@@ -59,22 +57,16 @@ export class AuthService {
     if (role === 'patient') {
       let p = await this.patientRepo.findOne({ where: { mobile: num } });
       if (!p) p = await this.patientRepo.save(this.patientRepo.create({ mobile: num, name }));
-      const token = this.jwt.sign({ sub: p.id, role: 'patient', mobile: num });
-      return { token, user: p, role: 'patient' };
+      return { token: this.jwt.sign({ sub: p.id, role: 'patient' }), user: p, role: 'patient' };
     }
-    if (role === 'doctor') {
-      let d = await this.doctorRepo.findOne({ where: { mobile: num } });
-      if (!d) d = await this.doctorRepo.save(this.doctorRepo.create({ mobile: num, name, status: 'approved', isOnline: false }));
-      const token = this.jwt.sign({ sub: d.id, role: 'doctor', mobile: num });
-      return { token, user: d, role: 'doctor' };
-    }
-    throw new BadRequestException('Invalid role');
+    let d = await this.doctorRepo.findOne({ where: { mobile: num } });
+    if (!d) d = await this.doctorRepo.save(this.doctorRepo.create({ mobile: num, name, status: 'approved', isOnline: false }));
+    return { token: this.jwt.sign({ sub: d.id, role: 'doctor' }), user: d, role: 'doctor' };
   }
 
   async adminLogin(email: string, password: string) {
     if (email !== 'admin@digidoc.com' || password !== 'DigiDoc@2026')
       throw new UnauthorizedException('Invalid credentials');
-    const token = this.jwt.sign({ sub: 'admin', role: 'admin' });
-    return { token, role: 'admin' };
+    return { token: this.jwt.sign({ sub: 'admin', role: 'admin' }), role: 'admin' };
   }
 }
