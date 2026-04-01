@@ -1,37 +1,30 @@
 import { Injectable } from '@nestjs/common';
-import { DoctorsService }   from '../doctors/doctors.service';
-import { PatientsService }  from '../patients/patients.service';
-import { OrdersService }    from '../orders/orders.service';
-import { MedicinesService } from '../medicines/medicines.service';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Doctor } from '../doctors/schemas/doctor.schema';
+import { Patient } from '../patients/schemas/patient.schema';
+
 @Injectable()
 export class AdminService {
   constructor(
-    private doctors:   DoctorsService,
-    private patients:  PatientsService,
-    private orders:    OrdersService,
-    private medicines: MedicinesService,
+    @InjectModel(Doctor.name)  private docModel: Model<Doctor>,
+    @InjectModel(Patient.name) private ptModel:  Model<Patient>,
   ) {}
-  getDashboardStats() {
-    return Promise.all([
-      this.doctors.findAll(),
-      this.patients.findAll(),
-      this.orders.findPending(),
-      this.doctors.findPending(),
-    ]).then(([doctors, patients, pendingOrders, pendingDoctors]) => ({
-      totalDoctors:    doctors.length,
-      totalPatients:   patients.length,
-      pendingOrders:   pendingOrders.length,
-      pendingApprovals: pendingDoctors.length,
-    }));
+
+  getPendingDoctors() { return this.docModel.find({ status: 'pending' }).lean(); }
+  approveDoctor(id: string) { return this.docModel.findByIdAndUpdate(id, { status: 'approved' }, { new: true }); }
+  rejectDoctor(id: string)  { return this.docModel.findByIdAndDelete(id); }
+  blockDoctor(id: string, status: string)   { return this.docModel.findByIdAndUpdate(id, { status }, { new: true }); }
+  blockPatient(id: string, status: string)  { return this.ptModel.findByIdAndUpdate(id, { status }, { new: true }); }
+  getAllDoctors()   { return this.docModel.find().lean(); }
+  getAllPatients()  { return this.ptModel.find().lean(); }
+
+  async getStats() {
+    const [doctors, patients, pendingDrs] = await Promise.all([
+      this.docModel.countDocuments({ status: 'approved' }),
+      this.ptModel.countDocuments(),
+      this.docModel.countDocuments({ status: 'pending' }),
+    ]);
+    return { doctors, patients, pendingDrs };
   }
-  getPendingDoctors()     { return this.doctors.findPending(); }
-  approveDoctor(id: string) { return this.doctors.approve(id); }
-  rejectDoctor(id: string)  { return this.doctors.reject(id); }
-  suspendDoctor(id: string) { return this.doctors.suspend(id); }
-  getAllPatients()           { return this.patients.findAll(); }
-  getAllOrders()             { return this.orders.findAll(); }
-  dispatchOrder(id: string, trackingNo: string) { return this.orders.dispatch(id, trackingNo); }
-  addMedicine(data: any)     { return this.medicines.create(data); }
-  updateMedicine(id: string, data: any) { return this.medicines.update(id, data); }
-  removeMedicine(id: string) { return this.medicines.remove(id); }
 }

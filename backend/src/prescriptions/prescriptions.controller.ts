@@ -1,15 +1,12 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Request } from '@nestjs/common';
 import { PrescriptionsService } from './prescriptions.service';
-import { JwtGuard }    from '../common/guards/jwt.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { JwtService } from '@nestjs/jwt';
 @Controller('prescriptions')
-@UseGuards(JwtGuard)
 export class PrescriptionsController {
-  constructor(private svc: PrescriptionsService) {}
-  @Post()   create(@Body() b: any)     { return this.svc.create(b); }
-  @Get('my') getMyRx(@CurrentUser() u: any) {
-    if (u.role === 'doctor') return this.svc.findByDoctor(u.sub);
-    return this.svc.findByPatient(u.sub);
+  constructor(private svc: PrescriptionsService, private jwt: JwtService) {}
+  @Get('my')
+  findMy(@Request() req: any) {
+    try { const p=this.jwt.verify(req.headers?.authorization?.split(' ')[1]); return this.svc.findByPatient(p.sub); } catch { return []; }
   }
-  @Get(':id') getOne(@Param('id') id: string) { return this.svc.findOne(id); }
+  @Post() create(@Body() b: any) { return this.svc.create(b); }
 }

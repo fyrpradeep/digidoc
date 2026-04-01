@@ -1,13 +1,10 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { JwtModule } from '@nestjs/jwt';
-import { MedicineEntity }      from './medicine.entity';
+import { MongooseModule } from '@nestjs/mongoose';
 import { MedicinesController } from './medicines.controller';
-import { MedicinesService }    from './medicines.service';
+import { MedicinesService } from './medicines.service';
+import { Medicine, MedicineSchema } from './schemas/medicine.schema';
 @Module({
-  imports: [TypeOrmModule.forFeature([MedicineEntity]), JwtModule],
-  controllers: [MedicinesController],
-  providers:   [MedicinesService],
-  exports:     [MedicinesService],
+  imports: [MongooseModule.forFeature([{ name: Medicine.name, schema: MedicineSchema }])],
+  controllers: [MedicinesController], providers: [MedicinesService], exports: [MedicinesService],
 })
 export class MedicinesModule {}

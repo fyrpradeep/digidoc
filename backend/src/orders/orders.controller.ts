@@ -1,18 +1,14 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Request } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { JwtGuard }    from '../common/guards/jwt.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { JwtService } from '@nestjs/jwt';
 @Controller('orders')
-@UseGuards(JwtGuard)
 export class OrdersController {
-  constructor(private svc: OrdersService) {}
-  @Post()   create(@Body() b: any, @CurrentUser() u: any) { return this.svc.create({ ...b, patientId: u.sub }); }
-  @Get('my') getMy(@CurrentUser() u: any)   { return this.svc.findByPatient(u.sub); }
-  @Get('all') getAll()                      { return this.svc.findAll(); }
-  @Get('pending') getPending()              { return this.svc.findPending(); }
-  @Get(':id') getOne(@Param('id') id: string) { return this.svc.findOne(id); }
-  @Put(':id/dispatch') dispatch(@Param('id') id: string, @Body() b: { trackingNo: string }) {
-    return this.svc.dispatch(id, b.trackingNo);
+  constructor(private svc: OrdersService, private jwt: JwtService) {}
+  @Get() findAll() { return this.svc.findAll(); }
+  @Get('my')
+  findMy(@Request() req: any) {
+    try { const p=this.jwt.verify(req.headers?.authorization?.split(' ')[1]); return this.svc.findByPatient(p.sub); } catch { return []; }
   }
-  @Put(':id/deliver') deliver(@Param('id') id: string) { return this.svc.deliver(id); }
+  @Post() create(@Body() b: any) { return this.svc.create(b); }
+  @Put(':id') update(@Param('id') id: string, @Body() b: any) { return this.svc.update(id, b); }
 }

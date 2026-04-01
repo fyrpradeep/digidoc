@@ -1,12 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { PrescriptionEntity } from './prescription.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Prescription } from './schemas/prescription.schema';
 @Injectable()
 export class PrescriptionsService {
-  constructor(@InjectRepository(PrescriptionEntity) private repo: Repository<PrescriptionEntity>) {}
-  create(data: Partial<PrescriptionEntity>) { return this.repo.save(this.repo.create(data)); }
-  findByPatient(patientId: string) { return this.repo.find({ where: { patientId }, order: { createdAt: 'DESC' } }); }
-  findByDoctor(doctorId: string)   { return this.repo.find({ where: { doctorId }, order: { createdAt: 'DESC' } }); }
-  findOne(id: string)              { return this.repo.findOne({ where: { id } }); }
+  constructor(@InjectModel(Prescription.name) private model: Model<Prescription>) {}
+  findByPatient(id: string) { return this.model.find({ patientId: id }).sort({ createdAt: -1 }).lean(); }
+  create(data: any) { return this.model.create(data); }
 }

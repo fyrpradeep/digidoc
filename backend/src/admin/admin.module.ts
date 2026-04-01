@@ -1,14 +1,20 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AdminController } from './admin.controller';
-import { AdminService }    from './admin.service';
-import { DoctorsModule }   from '../doctors/doctors.module';
-import { PatientsModule }  from '../patients/patients.module';
-import { OrdersModule }    from '../orders/orders.module';
-import { MedicinesModule } from '../medicines/medicines.module';
+import { AdminService } from './admin.service';
+import { Doctor, DoctorSchema } from '../doctors/schemas/doctor.schema';
+import { Patient, PatientSchema } from '../patients/schemas/patient.schema';
+import { JwtModule } from '@nestjs/jwt';
+
 @Module({
-  imports: [JwtModule, DoctorsModule, PatientsModule, OrdersModule, MedicinesModule],
+  imports: [
+    MongooseModule.forFeature([
+      { name: Doctor.name, schema: DoctorSchema },
+      { name: Patient.name, schema: PatientSchema },
+    ]),
+    JwtModule.register({ secret: process.env.JWT_SECRET || 'digidoc_secret' }),
+  ],
   controllers: [AdminController],
-  providers:   [AdminService],
+  providers: [AdminService],
 })
 export class AdminModule {}

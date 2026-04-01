@@ -1,30 +1,21 @@
-import { Controller, Get, Put, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Body, Param, Request, UseGuards } from '@nestjs/common';
 import { DoctorsService } from './doctors.service';
-import { JwtGuard }       from '../common/guards/jwt.guard';
-import { CurrentUser }    from '../common/decorators/current-user.decorator';
+import { JwtService } from '@nestjs/jwt';
 
 @Controller('doctors')
 export class DoctorsController {
-  constructor(private svc: DoctorsService) {}
+  constructor(private svc: DoctorsService, private jwt: JwtService) {}
 
-  @Get()
-  getAll() { return this.svc.findAll(); }
-
-  @Get('online')
-  getOnline() { return this.svc.findOnline(); }
-
-  @Get(':id')
-  getOne(@Param('id') id: string) { return this.svc.findOne(id); }
+  @Get() findAll() { return this.svc.findAll(); }
+  @Get('online') findOnline() { return this.svc.findOnline(); }
+  @Get(':id') findOne(@Param('id') id: string) { return this.svc.findById(id); }
 
   @Put('me/online')
-  @UseGuards(JwtGuard)
-  toggleOnline(@CurrentUser() user: any, @Body() body: { isOnline: boolean }) {
-    return this.svc.toggleOnline(user.sub, body.isOnline);
-  }
-
-  @Put('me')
-  @UseGuards(JwtGuard)
-  updateMe(@CurrentUser() user: any, @Body() body: any) {
-    return this.svc.update(user.sub, body);
+  setOnline(@Body() b: { isOnline: boolean }, @Request() req: any) {
+    try {
+      const token = req.headers?.authorization?.split(' ')[1];
+      const p = this.jwt.verify(token);
+      return this.svc.setOnline(p.sub, b.isOnline);
+    } catch { return { ok: false }; }
   }
 }

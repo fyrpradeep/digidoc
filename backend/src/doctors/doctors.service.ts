@@ -1,29 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository }       from 'typeorm';
-import { DoctorEntity }     from './doctor.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Doctor } from './schemas/doctor.schema';
 
 @Injectable()
 export class DoctorsService {
-  constructor(@InjectRepository(DoctorEntity) private repo: Repository<DoctorEntity>) {}
-
-  findAll()                    { return this.repo.find({ where: { status: 'approved', isActive: true } }); }
-  findOnline()                 { return this.repo.find({ where: { status: 'approved', isOnline: true } }); }
-  findPending()                { return this.repo.find({ where: { status: 'pending' } }); }
-  findOne(id: string)          { return this.repo.findOne({ where: { id } }); }
-  findByMobile(m: string)      { return this.repo.findOne({ where: { mobile: m } }); }
-
-  async toggleOnline(id: string, isOnline: boolean) {
-    await this.repo.update(id, { isOnline });
-    return this.findOne(id);
-  }
-
-  async update(id: string, data: Partial<DoctorEntity>) {
-    await this.repo.update(id, data);
-    return this.findOne(id);
-  }
-
-  async approve(id: string)  { return this.update(id, { status: 'approved' }); }
-  async reject(id: string)   { return this.update(id, { status: 'rejected' }); }
-  async suspend(id: string)  { return this.update(id, { status: 'suspended' }); }
+  constructor(@InjectModel(Doctor.name) private model: Model<Doctor>) {}
+  findAll()            { return this.model.find({ status: 'approved' }).select('-__v').lean(); }
+  findOnline()         { return this.model.find({ status: 'approved', isOnline: true }).select('-__v').lean(); }
+  findById(id: string) { return this.model.findById(id).lean(); }
+  setOnline(id: string, isOnline: boolean) { return this.model.findByIdAndUpdate(id, { isOnline }, { new: true }); }
+  update(id: string, data: any) { return this.model.findByIdAndUpdate(id, data, { new: true }); }
 }

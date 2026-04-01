@@ -1,23 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository }       from 'typeorm';
-import { PatientEntity }    from './patient.entity';
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Patient } from './schemas/patient.schema';
 
 @Injectable()
 export class PatientsService {
-  constructor(@InjectRepository(PatientEntity) private repo: Repository<PatientEntity>) {}
-
-  findAll()               { return this.repo.find({ where: { isActive: true } }); }
-  findOne(id: string)     { return this.repo.findOne({ where: { id } }); }
-  findByMobile(m: string) { return this.repo.findOne({ where: { mobile: m } }); }
-
-  async update(id: string, data: Partial<PatientEntity>) {
-    await this.repo.update(id, data);
-    return this.findOne(id);
-  }
-
-  async remove(id: string) {
-    await this.repo.update(id, { isActive: false });
-    return { message: 'Account deactivated' };
-  }
+  constructor(@InjectModel(Patient.name) private model: Model<Patient>) {}
+  findAll()   { return this.model.find().select('-__v').lean(); }
+  findById(id: string) { return this.model.findById(id).lean(); }
+  update(id: string, data: any) { return this.model.findByIdAndUpdate(id, data, { new: true }); }
 }
