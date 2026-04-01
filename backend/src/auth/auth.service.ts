@@ -13,102 +13,68 @@ export class AuthService {
     @InjectRepository(OtpEntity)     private otpRepo:     Repository<OtpEntity>,
     @InjectRepository(PatientEntity) private patientRepo: Repository<PatientEntity>,
     @InjectRepository(DoctorEntity)  private doctorRepo:  Repository<DoctorEntity>,
-    private jwtService:    JwtService,
-    private configService: ConfigService,
+    private jwt: JwtService,
+    private cfg: ConfigService,
   ) {}
 
-  // ── Send OTP ──────────────────────────────────────────────────────
+  private clean(mobile: string) { return mobile.replace(/\D/g, '').slice(-10); }
+
   async sendOtp(mobile: string) {
-    const clean = mobile.replace(/\D/g, '').slice(-10);
-    const otp   = Math.floor(100000 + Math.random() * 900000).toString();
-
-    await this.otpRepo.delete({ mobile: clean });
-    await this.otpRepo.save({
-      mobile: clean, otp,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-    });
-
-    console.log(`📱 OTP for ${clean}: ${otp}`);
-
-    // TODO: Uncomment when MSG91 key is ready
-    // await this.sendSmsViaMSG91(clean, otp);
-
-    return {
-      message: 'OTP sent successfully',
-      dev_otp: process.env.NODE_ENV !== 'production' ? otp : undefined,
-    };
+    const num = this.clean(mobile);
+    if (num.length < 10) throw new BadRequestException('Invalid mobile number');
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    await this.otpRepo.delete({ mobile: num });
+    await this.otpRepo.save({ mobile: num, otp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) });
+    console.log(`📱 OTP [${num}]: ${otp}`);
+    // TODO: SMS via MSG91
+    return { message: 'OTP sent', dev_otp: process.env.NODE_ENV !== 'production' ? otp : undefined };
   }
 
-  // ── Verify OTP ────────────────────────────────────────────────────
   async verifyOtp(mobile: string, otp: string) {
-    const clean = mobile.replace(/\D/g, '').slice(-10);
-
-    const record = await this.otpRepo.findOne({ where: { mobile: clean } });
-    if (!record)                       throw new BadRequestException('OTP not found. Request a new one.');
-    if (record.verified)               throw new BadRequestException('OTP already used.');
-    if (new Date() > record.expiresAt) throw new BadRequestException('OTP expired.');
-    if (record.otp !== otp)            throw new UnauthorizedException('Invalid OTP.');
-
-    await this.otpRepo.update(record.id, { verified: true });
+    const num = this.clean(mobile);
+    const rec = await this.otpRepo.findOne({ where: { mobile: num } });
+    if (!rec) throw new BadRequestException('Send OTP first');
+    if (rec.otp !== otp) throw new UnauthorizedException('Wrong OTP');
+    if (new Date() > rec.expiresAt) throw new BadRequestException('OTP expired');
+    await this.otpRepo.delete({ mobile: num });
 
     // Check existing patient
-    const patient = await this.patientRepo.findOne({ where: { mobile: clean } });
+    const patient = await this.patientRepo.findOne({ where: { mobile: num } });
     if (patient) {
-      const token = this.jwtService.sign({ sub: patient.id, role: 'patient', mobile: clean });
+      const token = this.jwt.sign({ sub: patient.id, role: 'patient', mobile: num });
       return { token, user: patient, role: 'patient', isNew: false };
     }
-
     // Check existing doctor
-    const doctor = await this.doctorRepo.findOne({ where: { mobile: clean } });
+    const doctor = await this.doctorRepo.findOne({ where: { mobile: num } });
     if (doctor) {
-      const token = this.jwtService.sign({ sub: doctor.id, role: 'doctor', mobile: clean });
+      const token = this.jwt.sign({ sub: doctor.id, role: 'doctor', mobile: num });
       return { token, user: doctor, role: 'doctor', isNew: false };
     }
-
     // New user
-    const token = this.jwtService.sign({ mobile: clean, role: 'new' });
-    return { token, user: null, role: 'new', isNew: true };
+    return { token: null, user: null, role: null, isNew: true };
   }
 
-  // ── Complete Registration — SAVES to DB ───────────────────────────
-  async completeRegistration(mobile: string, role: 'patient' | 'doctor', name?: string) {
-    const clean = mobile.replace(/\D/g, '').slice(-10);
-
+  async register(mobile: string, role: 'patient'|'doctor', name: string) {
+    const num = this.clean(mobile);
     if (role === 'patient') {
-      // Check if already exists
-      let patient = await this.patientRepo.findOne({ where: { mobile: clean } });
-      if (!patient) {
-        patient = await this.patientRepo.save(
-          this.patientRepo.create({ mobile: clean, name: name || '' })
-        );
-        console.log(`✅ New patient registered: ${name} (${clean})`);
-      }
-      const token = this.jwtService.sign({ sub: patient.id, role: 'patient', mobile: clean });
-      return { token, user: patient, role: 'patient' };
+      let p = await this.patientRepo.findOne({ where: { mobile: num } });
+      if (!p) p = await this.patientRepo.save(this.patientRepo.create({ mobile: num, name }));
+      const token = this.jwt.sign({ sub: p.id, role: 'patient', mobile: num });
+      return { token, user: p, role: 'patient' };
     }
-
     if (role === 'doctor') {
-      let doctor = await this.doctorRepo.findOne({ where: { mobile: clean } });
-      if (!doctor) {
-        doctor = await this.doctorRepo.save(
-          this.doctorRepo.create({ mobile: clean, name: name || '', status: 'approved', isOnline: false })
-        );
-        console.log(`✅ New doctor registered: ${name} (${clean})`);
-      }
-      const token = this.jwtService.sign({ sub: doctor.id, role: 'doctor', mobile: clean });
-      return { token, user: doctor, role: 'doctor' };
+      let d = await this.doctorRepo.findOne({ where: { mobile: num } });
+      if (!d) d = await this.doctorRepo.save(this.doctorRepo.create({ mobile: num, name, status: 'approved', isOnline: false }));
+      const token = this.jwt.sign({ sub: d.id, role: 'doctor', mobile: num });
+      return { token, user: d, role: 'doctor' };
     }
-
     throw new BadRequestException('Invalid role');
   }
 
-  // ── Admin Login ───────────────────────────────────────────────────
-  async adminLogin(username: string, password: string) {
-    const adminUser = this.configService.get('ADMIN_USERNAME', 'admin@digidoc.com');
-    const adminPass = this.configService.get('ADMIN_PASSWORD', 'DigiDoc@2026');
-    if (username !== adminUser || password !== adminPass)
-      throw new UnauthorizedException('Invalid admin credentials.');
-    const token = this.jwtService.sign({ sub: 'admin', role: 'admin' });
+  async adminLogin(email: string, password: string) {
+    if (email !== 'admin@digidoc.com' || password !== 'DigiDoc@2026')
+      throw new UnauthorizedException('Invalid credentials');
+    const token = this.jwt.sign({ sub: 'admin', role: 'admin' });
     return { token, role: 'admin' };
   }
 }

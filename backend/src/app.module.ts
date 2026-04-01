@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule }          from './auth/auth.module';
 import { PatientsModule }      from './patients/patients.module';
@@ -16,28 +16,37 @@ import { CallModule }          from './call/call.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRoot({
-      type:        'postgres',
-      host:        'localhost',
-      port:        5432,
-      username:    'postgres',
-      password:    'digidoc2026',
-      database:    'digidoc',
-      entities:    [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true,
-      logging:     false,
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject:  [ConfigService],
+      useFactory: (cfg: ConfigService) => {
+        const dbUrl = cfg.get<string>('DATABASE_URL');
+        if (dbUrl) {
+          return {
+            type: 'postgres',
+            url: dbUrl,
+            ssl: { rejectUnauthorized: false },
+            entities: [__dirname + '/**/*.entity{.ts,.js}'],
+            synchronize: true,
+            logging: false,
+          };
+        }
+        return {
+          type:        'postgres',
+          host:        cfg.get('DB_HOST',     'localhost'),
+          port:        cfg.get<number>('DB_PORT', 5432),
+          username:    cfg.get('DB_USER',     'postgres'),
+          password:    cfg.get('DB_PASS',     'digidoc2026'),
+          database:    cfg.get('DB_NAME',     'digidoc'),
+          entities:    [__dirname + '/**/*.entity{.ts,.js}'],
+          synchronize: true,
+          logging:     false,
+        };
+      },
     }),
-    AuthModule,
-    PatientsModule,
-    DoctorsModule,
-    AdminModule,
-    AppointmentsModule,
-    PrescriptionsModule,
-    OrdersModule,
-    MedicinesModule,
-    PaymentsModule,
-    NotificationsModule,
-    CallModule,      // ← WebSocket for video calls
+    AuthModule, PatientsModule, DoctorsModule, AdminModule,
+    AppointmentsModule, PrescriptionsModule, OrdersModule,
+    MedicinesModule, PaymentsModule, NotificationsModule, CallModule,
   ],
 })
 export class AppModule {}
