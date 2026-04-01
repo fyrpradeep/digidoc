@@ -1,225 +1,281 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
-import { useCall } from "@/hooks/useCall";
 
 const S = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{height:100%;overflow:hidden;}
   @keyframes ripple{0%{transform:scale(1);opacity:0.8}100%{transform:scale(2.5);opacity:0}}
-  @keyframes shimmerH{0%{background-position:-200% center}100%{background-position:200% center}}
+  @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-  @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
   .ring{position:absolute;width:100%;height:100%;border-radius:50%;border:2px solid rgba(0,255,209,0.4);animation:ripple 2s infinite}
-  .ring2{animation-delay:0.6s}
-  .ring3{animation-delay:1.2s}
-  .shine{background:linear-gradient(90deg,#00FFD1,#4DB8FF,#00FFD1);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmerH 3s linear infinite}
-  .ctrl-btn{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;font-size:22px;transition:all 0.2s;flex-shrink:0}
-  .ctrl-btn:hover{transform:scale(1.1)}
-  .ctrl-btn:active{transform:scale(0.95)}
-  .end-btn{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;font-size:26px;transition:all 0.2s;background:linear-gradient(135deg,#FF4B4B,#CC0000);box-shadow:0 0 24px rgba(255,75,75,0.5)}
-  .end-btn:hover{transform:scale(1.08);box-shadow:0 0 36px rgba(255,75,75,0.7)}
-  .accept-btn{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;font-size:26px;transition:all 0.2s;background:linear-gradient(135deg,#00C9A7,#0B6FCC);box-shadow:0 0 24px rgba(0,201,167,0.5)}
-  .accept-btn:hover{transform:scale(1.08)}
+  .ring2{animation-delay:0.7s}
 `;
 
 export default function CallPage() {
-  const router       = useRouter();
-  const params       = useParams();
-  const searchParams = useSearchParams();
-  const roomId       = params.roomId as string;
+  const router = useRouter();
+  const params = useParams();
+  const search = useSearchParams();
+  const roomId     = params.roomId as string;
+  const role       = search.get("role")||"patient";
+  const userId     = search.get("userId")||"u1";
+  const userName   = search.get("userName")||"User";
+  const doctorId   = search.get("doctorId")||"d1";
+  const doctorName = decodeURIComponent(search.get("doctorName")||"Doctor");
+  const callType   = search.get("callType")||"video";
 
-  // URL params
-  const role       = searchParams.get("role") || "patient";
-  const userId     = searchParams.get("userId") || "user1";
-  const userName   = searchParams.get("userName") || "User";
-  const doctorId   = searchParams.get("doctorId") || "doc1";
-  const doctorName = searchParams.get("doctorName") || "Doctor";
-  const callType   = (searchParams.get("callType") || "video") as "video"|"audio";
+  const localRef  = useRef<HTMLVideoElement>(null);
+  const remoteRef = useRef<HTMLVideoElement>(null);
+  const socketRef = useRef<any>(null);
+  const pcRef     = useRef<RTCPeerConnection|null>(null);
+  const streamRef = useRef<MediaStream|null>(null);
 
-  const localVideoRef  = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const [status, setStatus]   = useState<"calling"|"incoming"|"connected"|"ended"|"rejected"|"error">(
+    role==="doctor"?"incoming":"calling"
+  );
   const [duration, setDuration] = useState(0);
-  const [showChat, setShowChat] = useState(false);
-  const [chatMsg, setChatMsg]   = useState("");
-  const [messages, setMessages] = useState<{from:string;text:string}[]>([]);
+  const [muted, setMuted]     = useState(false);
+  const [videoOff, setVideoOff] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [incomingData, setIncomingData] = useState<any>(null);
 
-  const {
-    connect, initiateCall, acceptCall, rejectCall, endCall,
-    toggleAudio, toggleVideo,
-    callState, incomingCall,
-    localStream, remoteStream,
-    isVideoMuted, isAudioMuted,
-  } = useCall();
+  // ── Connect Socket ──────────────────────────────────────────────
+  useEffect(()=>{
+    const SOCKET_URL = (process.env.NEXT_PUBLIC_API_URL||"http://localhost:4000/api").replace("/api","");
+    import("socket.io-client").then(({io})=>{
+      const socket = io(`${SOCKET_URL}/call`,{transports:["websocket"]});
+      socketRef.current = socket;
 
-  // Connect socket + register
-  useEffect(() => {
-    connect(userId, role as "patient"|"doctor", userName);
+      socket.on("connect",()=>{
+        socket.emit("register",{userId,role,name:userName});
 
-    // Patient: initiate call immediately
-    if (role === "patient") {
-      setTimeout(() => {
-        initiateCall(roomId, userId, userName, doctorId, doctorName, callType);
-      }, 500);
-    }
-  }, []);
-
-  // Attach local stream to video
-  useEffect(() => {
-    if (localStream.current && localVideoRef.current) {
-      localVideoRef.current.srcObject = localStream.current;
-    }
-  }, [callState]);
-
-  // Attach remote stream
-  useEffect(() => {
-    if (callState === "connected") {
-      const interval = setInterval(() => {
-        if (remoteStream.current && remoteVideoRef.current && !remoteVideoRef.current.srcObject) {
-          remoteVideoRef.current.srcObject = remoteStream.current;
+        if(role==="patient"){
+          socket.emit("call:request",{roomId,patientId:userId,patientName:userName,doctorId,doctorName,callType});
         }
-      }, 500);
-      return () => clearInterval(interval);
+      });
+
+      socket.on("call:incoming",(data:any)=>{
+        setIncomingData(data);
+        setStatus("incoming");
+      });
+
+      socket.on("call:accepted",()=>{
+        setStatus("connected");
+        startWebRTC(true);
+      });
+
+      socket.on("call:rejected",()=>setStatus("rejected"));
+      socket.on("call:doctor-offline",()=>{ setErrorMsg("Doctor is offline"); setStatus("error"); });
+      socket.on("call:ended",()=>{ setStatus("ended"); cleanup(); });
+
+      socket.on("webrtc:offer",async(data:any)=>{
+        if(!pcRef.current) await setupPC();
+        await pcRef.current!.setRemoteDescription(data.offer);
+        const answer = await pcRef.current!.createAnswer();
+        await pcRef.current!.setLocalDescription(answer);
+        socket.emit("webrtc:answer",{roomId,answer,fromId:userId});
+      });
+
+      socket.on("webrtc:answer",async(data:any)=>{
+        await pcRef.current?.setRemoteDescription(data.answer);
+      });
+
+      socket.on("webrtc:ice",async(data:any)=>{
+        try{ await pcRef.current?.addIceCandidate(data.candidate); }catch{}
+      });
+    }).catch(()=>{
+      // No socket — show simple UI
+      if(role==="patient") setStatus("calling");
+      if(role==="doctor") setStatus("incoming");
+    });
+
+    return ()=>{ cleanup(); socketRef.current?.disconnect(); };
+  },[]);
+
+  // Duration timer
+  useEffect(()=>{
+    if(status!=="connected") return;
+    const t = setInterval(()=>setDuration(d=>d+1),1000);
+    return ()=>clearInterval(t);
+  },[status]);
+
+  const setupPC = async()=>{
+    const pc = new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});
+    pcRef.current = pc;
+
+    // Get media — video or audio only
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia(
+        callType==="video"?{video:true,audio:true}:{audio:true}
+      );
+      streamRef.current = stream;
+      stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+      if(localRef.current&&callType==="video"){
+        localRef.current.srcObject = stream;
+        localRef.current.muted = true;
+      }
+    }catch{
+      // Camera not available — continue audio only
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        streamRef.current = stream;
+        stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+      }catch{ /* no mic either */ }
     }
-  }, [callState]);
 
-  // Call duration timer
-  useEffect(() => {
-    if (callState !== "connected") return;
-    const t = setInterval(() => setDuration(d => d+1), 1000);
-    return () => clearInterval(t);
-  }, [callState]);
+    pc.ontrack = (e)=>{
+      if(remoteRef.current) remoteRef.current.srcObject = e.streams[0];
+    };
 
-  const fmt = (s:number) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+    pc.onicecandidate = (e)=>{
+      if(e.candidate) socketRef.current?.emit("webrtc:ice",{roomId,candidate:e.candidate,fromId:userId});
+    };
 
-  const handleEnd = () => { endCall(); router.push("/dashboard"); };
+    return pc;
+  };
 
-  return (
-    <div style={{position:"fixed",inset:0,background:"#020D1A",fontFamily:"'Plus Jakarta Sans',sans-serif",color:"#E8F4FF",maxWidth:480,margin:"0 auto",left:0,right:0,display:"flex",flexDirection:"column"}}>
+  const startWebRTC = async(isInitiator:boolean)=>{
+    await setupPC();
+    if(isInitiator){
+      const offer = await pcRef.current!.createOffer();
+      await pcRef.current!.setLocalDescription(offer);
+      socketRef.current?.emit("webrtc:offer",{roomId,offer,fromId:userId});
+    }
+  };
+
+  const cleanup = ()=>{
+    streamRef.current?.getTracks().forEach(t=>t.stop());
+    pcRef.current?.close();
+    streamRef.current = null;
+    pcRef.current = null;
+  };
+
+  const acceptCall = async()=>{
+    socketRef.current?.emit("call:accept",{roomId:incomingData?.roomId||roomId,doctorId:userId,doctorName:userName});
+    setStatus("connected");
+    await startWebRTC(false);
+  };
+
+  const rejectCall = ()=>{
+    socketRef.current?.emit("call:reject",{roomId:incomingData?.roomId||roomId,doctorId:userId});
+    router.push("/doctor/dashboard");
+  };
+
+  const endCall = ()=>{
+    socketRef.current?.emit("call:end",{roomId,userId});
+    cleanup();
+    setStatus("ended");
+  };
+
+  const toggleMute = ()=>{
+    const track = streamRef.current?.getAudioTracks()[0];
+    if(track){ track.enabled=!track.enabled; setMuted(!track.enabled); }
+  };
+
+  const toggleVideo = ()=>{
+    const track = streamRef.current?.getVideoTracks()[0];
+    if(track){ track.enabled=!track.enabled; setVideoOff(!track.enabled); }
+  };
+
+  const fmt=(s:number)=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"#020D1A",fontFamily:"'Plus Jakarta Sans',sans-serif",color:"#E8F4FF",display:"flex",flexDirection:"column"}}>
       <style>{S}</style>
 
-      {/* ── INCOMING CALL (Doctor side) ── */}
-      {callState === "incoming" && incomingCall && (
-        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",background:"linear-gradient(180deg,#020D1A 0%,#0D2040 100%)"}}>
-          <div style={{position:"relative",width:120,height:120,marginBottom:28}}>
-            <div className="ring"/>
-            <div className="ring ring2"/>
-            <div className="ring ring3"/>
-            <div style={{position:"relative",zIndex:2,width:120,height:120,borderRadius:"50%",background:"rgba(0,255,209,0.1)",border:"2px solid rgba(0,255,209,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:52}}>🧑</div>
-          </div>
-
-          <p style={{color:"rgba(232,244,255,0.5)",fontSize:14,marginBottom:6}}>Incoming {incomingCall.callType} call</p>
-          <h2 style={{fontSize:26,fontWeight:900,marginBottom:6}}>{incomingCall.patientName}</h2>
-          <span style={{padding:"4px 14px",borderRadius:100,background:"rgba(0,255,209,0.1)",color:"#00FFD1",fontSize:12,fontWeight:600,marginBottom:36}}>Patient</span>
-
-          <div style={{display:"flex",gap:40,alignItems:"center"}}>
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-              <button className="end-btn" onClick={()=>{rejectCall(userId);router.push("/doctor/dashboard");}}>📵</button>
-              <p style={{color:"rgba(232,244,255,0.5)",fontSize:11}}>Decline</p>
-            </div>
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-              <button className="accept-btn" style={{animation:"pulse 1.5s infinite"}} onClick={()=>acceptCall(userId, userName)}>📞</button>
-              <p style={{color:"#00FFD1",fontSize:11,fontWeight:700}}>Accept</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── CALLING (Patient waiting) ── */}
-      {callState === "calling" && (
-        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px"}}>
-          <div style={{position:"relative",width:110,height:110,marginBottom:28}}>
-            <div className="ring"/><div className="ring ring2"/><div className="ring ring3"/>
+      {/* CALLING — Patient waiting */}
+      {status==="calling"&&(
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,background:"linear-gradient(180deg,#020D1A,#0D2040)"}}>
+          <div style={{position:"relative",width:110,height:110,marginBottom:24}}>
+            <div className="ring"/><div className="ring ring2"/>
             <div style={{position:"relative",zIndex:2,width:110,height:110,borderRadius:"50%",background:"rgba(0,255,209,0.08)",border:"2px solid rgba(0,255,209,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:48}}>👨‍⚕️</div>
           </div>
           <p style={{color:"rgba(232,244,255,0.5)",fontSize:14,marginBottom:6}}>Calling</p>
-          <h2 style={{fontSize:24,fontWeight:900,marginBottom:4}}>{doctorName}</h2>
-          <p style={{color:"#00FFD1",fontSize:12,marginBottom:36}}>Waiting for doctor to accept...</p>
-          <button onClick={handleEnd} style={{padding:"12px 28px",borderRadius:100,background:"rgba(255,107,107,0.15)",border:"1px solid rgba(255,107,107,0.3)",color:"#FF6B6B",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-            Cancel Call
-          </button>
+          <h2 style={{fontSize:22,fontWeight:900,marginBottom:4}}>{doctorName}</h2>
+          <p style={{color:"#00FFD1",fontSize:12,marginBottom:32}}>Waiting for doctor to accept...</p>
+          <button onClick={endCall} style={{padding:"12px 28px",borderRadius:100,background:"rgba(255,107,107,0.15)",border:"1px solid rgba(255,107,107,0.3)",color:"#FF6B6B",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Cancel Call</button>
         </div>
       )}
 
-      {/* ── REJECTED / OFFLINE / ENDED ── */}
-      {(callState==="rejected"||callState==="offline"||callState==="ended") && (
-        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",textAlign:"center"}}>
-          <div style={{fontSize:56,marginBottom:16}}>{callState==="ended"?"📵":callState==="rejected"?"😔":"📴"}</div>
-          <h2 style={{fontSize:20,fontWeight:800,marginBottom:8}}>
-            {callState==="ended"?"Call Ended":callState==="rejected"?"Call Declined":"Doctor Offline"}
-          </h2>
-          <p style={{color:"rgba(232,244,255,0.45)",fontSize:13,marginBottom:28,lineHeight:1.7}}>
-            {callState==="ended"?"The call has ended.":callState==="rejected"?`${doctorName} is currently unavailable.`:"Doctor is offline. Try again later."}
-          </p>
-          {callState==="ended"&&duration>0&&<p style={{color:"#00FFD1",fontWeight:700,fontSize:15,marginBottom:20}}>Duration: {fmt(duration)}</p>}
-          <button onClick={()=>router.push("/dashboard")} style={{padding:"13px 28px",borderRadius:14,background:"linear-gradient(135deg,#00C9A7,#0B6FCC)",color:"white",fontWeight:700,fontSize:14,border:"none",cursor:"pointer",fontFamily:"inherit"}}>
-            Back to Home
-          </button>
+      {/* INCOMING — Doctor */}
+      {status==="incoming"&&(
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,background:"linear-gradient(180deg,#020D1A,#0D2040)"}}>
+          <div style={{position:"relative",width:120,height:120,marginBottom:24}}>
+            <div className="ring"/><div className="ring ring2"/>
+            <div style={{position:"relative",zIndex:2,width:120,height:120,borderRadius:"50%",background:"rgba(0,255,209,0.08)",border:"2px solid rgba(0,255,209,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:52}}>🧑</div>
+          </div>
+          <p style={{color:"rgba(232,244,255,0.5)",fontSize:14,marginBottom:6}}>Incoming {callType} call</p>
+          <h2 style={{fontSize:24,fontWeight:900,marginBottom:32}}>{incomingData?.patientName||"Patient"}</h2>
+          <div style={{display:"flex",gap:40}}>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+              <button onClick={rejectCall} style={{width:68,height:68,borderRadius:"50%",background:"linear-gradient(135deg,#FF4B4B,#CC0000)",border:"none",cursor:"pointer",fontSize:26,display:"flex",alignItems:"center",justifyContent:"center"}}>📵</button>
+              <p style={{color:"rgba(232,244,255,0.5)",fontSize:12}}>Decline</p>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+              <button onClick={acceptCall} style={{width:68,height:68,borderRadius:"50%",background:"linear-gradient(135deg,#00C9A7,#0B6FCC)",border:"none",cursor:"pointer",fontSize:26,display:"flex",alignItems:"center",justifyContent:"center",animation:"pulse 1.5s infinite"}}>📞</button>
+              <p style={{color:"#00FFD1",fontSize:12,fontWeight:700}}>Accept</p>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ── CONNECTED: Video call ── */}
-      {callState === "connected" && (
+      {/* CONNECTED — Video/Audio Call */}
+      {status==="connected"&&(
         <div style={{flex:1,display:"flex",flexDirection:"column",position:"relative"}}>
-          {/* Remote video (full screen) */}
-          {callType === "video" ? (
-            <video ref={remoteVideoRef} autoPlay playsInline style={{width:"100%",height:"100%",objectFit:"cover",background:"#0D1B35"}}/>
-          ) : (
-            <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(180deg,#020D1A,#0D2040)",flexDirection:"column",gap:14}}>
-              <div style={{width:100,height:100,borderRadius:"50%",background:"rgba(0,255,209,0.08)",border:"2px solid rgba(0,255,209,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:44}}>
+          {/* Remote video */}
+          {callType==="video"?(
+            <video ref={remoteRef} autoPlay playsInline style={{width:"100%",height:"100%",objectFit:"cover",background:"#0D1B35"}}/>
+          ):(
+            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"linear-gradient(180deg,#020D1A,#0D2040)"}}>
+              <div style={{width:90,height:90,borderRadius:"50%",background:"rgba(0,255,209,0.08)",border:"2px solid rgba(0,255,209,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:40,marginBottom:12}}>
                 {role==="patient"?"👨‍⚕️":"🧑"}
               </div>
-              <p style={{fontWeight:700,fontSize:16}}>{role==="patient"?doctorName:userName}</p>
-              <p style={{color:"#00FFD1",fontSize:12}}>🎵 Audio call active</p>
+              <p style={{fontWeight:700,fontSize:16,marginBottom:4}}>{role==="patient"?doctorName:incomingData?.patientName||"Patient"}</p>
+              <p style={{color:"#00FFD1",fontSize:12}}>🎵 Audio call connected</p>
             </div>
           )}
 
-          {/* Local video (picture-in-picture) */}
-          {callType === "video" && (
-            <video ref={localVideoRef} autoPlay playsInline muted
-              style={{position:"absolute",top:16,right:16,width:100,height:140,objectFit:"cover",borderRadius:14,border:"2px solid rgba(0,255,209,0.3)",background:"#0D1B35",transform:isVideoMuted?"none":"none"}}
-            />
+          {/* Local video pip */}
+          {callType==="video"&&!videoOff&&(
+            <video ref={localRef} autoPlay playsInline muted style={{position:"absolute",top:16,right:16,width:90,height:130,objectFit:"cover",borderRadius:12,border:"2px solid rgba(0,255,209,0.3)",background:"#0D1B35"}}/>
           )}
 
           {/* Duration */}
-          <div style={{position:"absolute",top:16,left:16,display:"flex",alignItems:"center",gap:7,padding:"6px 13px",borderRadius:100,background:"rgba(2,13,26,0.75)",backdropFilter:"blur(10px)",border:"1px solid rgba(255,255,255,0.1)"}}>
+          <div style={{position:"absolute",top:16,left:16,display:"flex",alignItems:"center",gap:7,padding:"6px 13px",borderRadius:100,background:"rgba(2,13,26,0.8)",backdropFilter:"blur(10px)"}}>
             <div style={{width:6,height:6,borderRadius:"50%",background:"#FF4B4B",animation:"pulse 1s infinite"}}/>
             <span style={{fontWeight:700,fontSize:12}}>{fmt(duration)}</span>
           </div>
 
-          {/* In-call chat */}
-          {showChat && (
-            <div style={{position:"absolute",bottom:100,left:0,right:0,background:"rgba(2,13,26,0.9)",backdropFilter:"blur(16px)",borderTop:"1px solid rgba(255,255,255,0.08)",padding:"10px 14px",maxHeight:200,overflowY:"auto"}}>
-              {messages.length===0&&<p style={{color:"rgba(232,244,255,0.3)",fontSize:12,textAlign:"center"}}>No messages yet</p>}
-              {messages.map((m,i)=>(
-                <p key={i} style={{fontSize:12,color:"#E8F4FF",marginBottom:4}}><strong style={{color:"#00FFD1"}}>{m.from}:</strong> {m.text}</p>
-              ))}
-              <div style={{display:"flex",gap:8,marginTop:8}}>
-                <input value={chatMsg} onChange={e=>setChatMsg(e.target.value)} placeholder="Type a message..." onKeyDown={e=>{ if(e.key==="Enter"&&chatMsg.trim()){setMessages(p=>[...p,{from:userName,text:chatMsg}]);setChatMsg("");}}}
-                  style={{flex:1,padding:"8px 11px",borderRadius:10,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",color:"#E8F4FF",fontFamily:"inherit",fontSize:12,outline:"none"}}
-                />
-                <button onClick={()=>{if(chatMsg.trim()){setMessages(p=>[...p,{from:userName,text:chatMsg}]);setChatMsg("");}}} style={{padding:"8px 14px",borderRadius:10,background:"linear-gradient(135deg,#00C9A7,#0B6FCC)",border:"none",cursor:"pointer",color:"white",fontWeight:700,fontSize:12,fontFamily:"inherit"}}>Send</button>
-              </div>
-            </div>
-          )}
-
           {/* Controls */}
-          <div style={{flexShrink:0,padding:"14px 20px 24px",background:"rgba(2,13,26,0.9)",backdropFilter:"blur(20px)",borderTop:"1px solid rgba(255,255,255,0.07)"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16}}>
-              <button className="ctrl-btn" onClick={toggleAudio} style={{background:isAudioMuted?"rgba(255,107,107,0.2)":"rgba(255,255,255,0.08)"}}>
-                {isAudioMuted?"🔇":"🎙️"}
+          <div style={{flexShrink:0,padding:"14px 20px 24px",background:"rgba(2,13,26,0.9)",backdropFilter:"blur(20px)",display:"flex",alignItems:"center",justifyContent:"center",gap:16}}>
+            <button onClick={toggleMute} style={{width:54,height:54,borderRadius:"50%",background:muted?"rgba(255,107,107,0.2)":"rgba(255,255,255,0.08)",border:"none",cursor:"pointer",fontSize:22,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+              {muted?"🔇":"🎙️"}
+            </button>
+            {callType==="video"&&(
+              <button onClick={toggleVideo} style={{width:54,height:54,borderRadius:"50%",background:videoOff?"rgba(255,107,107,0.2)":"rgba(255,255,255,0.08)",border:"none",cursor:"pointer",fontSize:22,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                {videoOff?"📷":"📹"}
               </button>
-              {callType==="video"&&(
-                <button className="ctrl-btn" onClick={toggleVideo} style={{background:isVideoMuted?"rgba(255,107,107,0.2)":"rgba(255,255,255,0.08)"}}>
-                  {isVideoMuted?"📷":"📹"}
-                </button>
-              )}
-              <button className="ctrl-btn" onClick={()=>setShowChat(p=>!p)} style={{background:showChat?"rgba(0,255,209,0.15)":"rgba(255,255,255,0.08)"}}>💬</button>
-              <button className="end-btn" onClick={handleEnd}>📵</button>
-            </div>
+            )}
+            <button onClick={endCall} style={{width:64,height:64,borderRadius:"50%",background:"linear-gradient(135deg,#FF4B4B,#CC0000)",border:"none",cursor:"pointer",fontSize:26,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 24px rgba(255,75,75,0.5)"}}>📵</button>
           </div>
+        </div>
+      )}
+
+      {/* ENDED / REJECTED / ERROR */}
+      {(status==="ended"||status==="rejected"||status==="error")&&(
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,textAlign:"center"}}>
+          <div style={{fontSize:56,marginBottom:16}}>{status==="ended"?"📵":status==="rejected"?"😔":"📴"}</div>
+          <h2 style={{fontSize:20,fontWeight:800,marginBottom:8}}>
+            {status==="ended"?"Call Ended":status==="rejected"?"Call Declined":"Connection Failed"}
+          </h2>
+          <p style={{color:"rgba(232,244,255,0.45)",fontSize:13,marginBottom:8,lineHeight:1.7}}>
+            {status==="ended"?`Duration: ${fmt(duration)}`:status==="rejected"?"Doctor unavailable right now.":errorMsg||"Could not connect."}
+          </p>
+          <button onClick={()=>window.location.href=role==="doctor"?"/doctor/dashboard":"/dashboard"}
+            style={{marginTop:16,padding:"13px 28px",borderRadius:14,background:"linear-gradient(135deg,#00C9A7,#0B6FCC)",color:"white",fontWeight:700,fontSize:14,border:"none",cursor:"pointer",fontFamily:"inherit"}}>
+            Back to Home
+          </button>
         </div>
       )}
     </div>
