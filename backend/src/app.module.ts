@@ -17,31 +17,11 @@ import { CallModule }          from './call/call.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject:  [ConfigService],
+      imports: [ConfigModule], inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
-        const dbUrl = cfg.get<string>('DATABASE_URL');
-        if (dbUrl) {
-          return {
-            type: 'postgres',
-            url: dbUrl,
-            ssl: { rejectUnauthorized: false },
-            entities: [__dirname + '/**/*.entity{.ts,.js}'],
-            synchronize: true,
-            logging: false,
-          };
-        }
-        return {
-          type:        'postgres',
-          host:        cfg.get('DB_HOST',     'localhost'),
-          port:        cfg.get<number>('DB_PORT', 5432),
-          username:    cfg.get('DB_USER',     'postgres'),
-          password:    cfg.get('DB_PASS',     'digidoc2026'),
-          database:    cfg.get('DB_NAME',     'digidoc'),
-          entities:    [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: true,
-          logging:     false,
-        };
+        const url = cfg.get<string>('DATABASE_URL');
+        if (url) return { type:'postgres', url, ssl:{rejectUnauthorized:false}, entities:[__dirname+'/**/*.entity{.ts,.js}'], synchronize:true, logging:false };
+        return { type:'postgres', host:cfg.get('DB_HOST','localhost'), port:cfg.get<number>('DB_PORT',5432), username:cfg.get('DB_USER','postgres'), password:cfg.get('DB_PASS','digidoc2026'), database:cfg.get('DB_NAME','digidoc'), entities:[__dirname+'/**/*.entity{.ts,.js}'], synchronize:true, logging:false };
       },
     }),
     AuthModule, PatientsModule, DoctorsModule, AdminModule,
