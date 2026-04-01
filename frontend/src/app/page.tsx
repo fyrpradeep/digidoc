@@ -1,321 +1,370 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { useState, useEffect, useRef } from "react";
 
-export default function Home() {
-  const router = useRouter();
-  const [scrolled, setScrolled] = useState(false);
+const FEATURES = [
+  { icon: "🧠", title: "AI Symptom Intelligence", desc: "Describe your symptoms. AI instantly finds the right specialist for you.", color: "#00FFD1" },
+  { icon: "📹", title: "HD Video Consultation", desc: "Crystal-clear video calls with verified doctors. Built directly into DigiDoc.", color: "#4DB8FF" },
+  { icon: "💊", title: "Smart Digital Prescription", desc: "Doctors write prescriptions live on the platform. One tap to order.", color: "#A78BFA" },
+  { icon: "🚀", title: "Medicine Home Delivery", desc: "Prescribed medicines ordered in a single tap. Fast doorstep delivery.", color: "#FB923C" },
+  { icon: "🤖", title: "24/7 AI Health Assistant", desc: "3am health anxiety? Our AI is always on. Always calm. Always helpful.", color: "#F472B6" },
+  { icon: "📡", title: "Real-time Availability", desc: "See which doctors are online right now. No appointments. Just connect.", color: "#34D399" },
+];
+
+const STEPS = [
+  { n: "01", icon: "📋", title: "Describe Your Symptoms", sub: "Talk to AI or fill a quick quiz" },
+  { n: "02", icon: "⚡", title: "Instant Doctor Match", sub: "AI selects the perfect specialist" },
+  { n: "03", icon: "📹", title: "Video or Audio Call", sub: "Consult from literally anywhere" },
+  { n: "04", icon: "💊", title: "Prescription + Delivery", sub: "Digital Rx and medicines at your door" },
+];
+
+const SPECS = [
+  { icon: "🫀", name: "Cardiology" },
+  { icon: "🧠", name: "Neurology" },
+  { icon: "🦷", name: "Dentistry" },
+  { icon: "👁️", name: "Eye Care" },
+  { icon: "🦴", name: "Orthopedics" },
+  { icon: "🧒", name: "Pediatrics" },
+  { icon: "🌸", name: "Gynecology" },
+  { icon: "🫁", name: "Pulmonology" },
+  { icon: "🩹", name: "Dermatology" },
+  { icon: "🩺", name: "General" },
+  { icon: "🧬", name: "Oncology" },
+  { icon: "🦻", name: "ENT" },
+];
+
+const REVIEWS = [
+  { name: "Priya M.", city: "Mumbai", text: "Fever at midnight. Video call with a doctor in under 3 minutes. This changed everything for me.", avatar: "👩" },
+  { name: "Rajesh K.", city: "Delhi", text: "Prescription was ready before the call ended. Medicine arrived by morning. Unbelievable.", avatar: "👨" },
+  { name: "Ananya S.", city: "Bangalore", text: "No waiting rooms. No appointments. Just open DigiDoc and talk to a doctor. Pure magic.", avatar: "👩" },
+];
+
+const DOCTORS = [
+  { name: "Dr. Priya Sharma",  spec: "General Physician", rating: "4.9", emoji: "👩‍⚕️" },
+  { name: "Dr. Arjun Mehta",   spec: "Cardiologist",      rating: "4.8", emoji: "👨‍⚕️" },
+  { name: "Dr. Sneha Rao",     spec: "Dermatologist",     rating: "4.7", emoji: "👩‍⚕️" },
+  { name: "Dr. Rahul Gupta",   spec: "Neurologist",       rating: "4.9", emoji: "👨‍⚕️" },
+  { name: "Dr. Anita Patel",   spec: "Pulmonologist",     rating: "4.8", emoji: "👩‍⚕️" },
+  { name: "Dr. Vikram Singh",  spec: "Orthopedic",        rating: "4.7", emoji: "👨‍⚕️" },
+];
+
+export default function Page() {
+  const [rev, setRev]         = useState(0);
+  const [scrollY, setScrollY] = useState(0);
+  const [cnt, setCnt]         = useState({ d: 0, p: 0 });
+  const [docIdx, setDocIdx]   = useState(0);
+  const [visible, setVisible] = useState(true);
+  const statsRef              = useRef<HTMLDivElement>(null);
+  const counted               = useRef(false);
 
   useEffect(() => {
-    try {
-      const t = localStorage.getItem("dg_token") || localStorage.getItem("digidoc_token") || "";
-      const r = localStorage.getItem("dg_role")  || localStorage.getItem("digidoc_role")  || "";
-      if (t && r) { router.replace(r==="doctor"?"/doctor/dashboard":r==="admin"?"/admin/dashboard":"/dashboard"); }
-    } catch {}
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
+    const fn = () => setScrollY(window.scrollY);
+    window.addEventListener("scroll", fn, { passive: true });
+    return () => window.removeEventListener("scroll", fn);
   }, []);
 
+  useEffect(() => {
+    const t = setInterval(() => setRev(p => (p + 1) % 3), 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setDocIdx(prev => (prev + 1) % DOCTORS.length);
+        setVisible(true);
+      }, 600);
+    }, 20000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !counted.current) {
+        counted.current = true;
+        let d = 0, p = 0;
+        const t = setInterval(() => {
+          d = Math.min(d + 10, 500);
+          p = Math.min(p + 800, 50000);
+          setCnt({ d, p });
+          if (d >= 500) clearInterval(t);
+        }, 20);
+      }
+    }, { threshold: 0.4 });
+    if (statsRef.current) obs.observe(statsRef.current);
+    return () => obs.disconnect();
+  }, []);
+
+  const doc = DOCTORS[docIdx];
+
   return (
-    <div style={{background:"#020D1A",color:"#E8F4FF",fontFamily:"'Plus Jakarta Sans',sans-serif",minHeight:"100vh",overflowX:"hidden"}}>
+    <main style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#020D1A", color: "#E8F4FF", overflowX: "hidden" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-        *{box-sizing:border-box;margin:0;padding:0}
-        html{scroll-behavior:smooth}
-        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#020D1A}::-webkit-scrollbar-thumb{background:#00FFD1;border-radius:4px}
-        @keyframes sh{0%{background-position:-200% center}to{background-position:200% center}}
-        @keyframes fy{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
-        @keyframes rp{0%{transform:scale(.8);opacity:1}to{transform:scale(2.4);opacity:0}}
-        .shine{background:linear-gradient(90deg,#00FFD1,#4DB8FF,#A78BFA,#00FFD1);background-size:300% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:sh 4s linear infinite}
-        .shine2{background:linear-gradient(90deg,#4DB8FF,#00FFD1,#4DB8FF);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:sh 3s linear infinite}
-        .btn-p{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:16px 28px;border-radius:14px;font-weight:800;font-size:15px;color:#fff;border:none;cursor:pointer;background:linear-gradient(135deg,#00C9A7,#0B6FCC);box-shadow:0 8px 32px rgba(0,201,167,.35);transition:all .3s;font-family:inherit;text-decoration:none}
-        .btn-p:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,201,167,.5)}
-        .btn-o{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:15px 26px;border-radius:14px;font-weight:700;font-size:14px;color:#00FFD1;border:1.5px solid rgba(0,255,209,.35);cursor:pointer;background:rgba(0,255,209,.06);transition:all .3s;font-family:inherit;text-decoration:none}
-        .btn-o:hover{background:rgba(0,255,209,.12)}
-        .card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:20px;transition:all .3s}
-        .card:hover{background:rgba(255,255,255,.05);border-color:rgba(0,255,209,.25);transform:translateY(-3px)}
-        .tag{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:100px;background:rgba(0,255,209,.08);border:1px solid rgba(0,255,209,.2);font-size:12px;font-weight:700;color:#00FFD1}
-        .ldot{width:7px;height:7px;border-radius:50%;background:#00FFD1;flex-shrink:0;position:relative}
-        .ldot::after{content:'';position:absolute;inset:-4px;border-radius:50%;background:rgba(0,255,209,.3);animation:rp 1.8s infinite}
-        .chip{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:100px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);font-size:12px;font-weight:600;color:rgba(232,244,255,.7);white-space:nowrap;transition:all .2s;text-decoration:none}
-        .chip:hover{background:rgba(0,255,209,.08);border-color:rgba(0,255,209,.25);color:#00FFD1}
-        .step-num{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#00C9A7,#0B6FCC);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 0 20px rgba(0,201,167,.4)}
-        .faq-item{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;margin-bottom:10px;overflow:hidden;transition:all .3s}
-        .faq-item:hover{border-color:rgba(0,255,209,.2)}
-        .fl{color:rgba(232,244,255,.4);font-size:13px;text-decoration:none;transition:color .2s;display:block;margin-bottom:8px}
-        .fl:hover{color:#00FFD1}
-        .orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
-        .testi{background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:20px}
-        .pcard{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:22px;position:relative;transition:all .3s}
-        .pcard.pop{background:linear-gradient(135deg,rgba(0,201,167,.1),rgba(11,111,204,.12));border-color:rgba(0,255,209,.35);box-shadow:0 0 40px rgba(0,255,209,.1)}
-        @media(max-width:600px){.hide-mob{display:none!important}.grid2{grid-template-columns:1fr!important}.grid4{grid-template-columns:1fr 1fr!important}.grid3{grid-template-columns:1fr!important}}
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        @keyframes fadeUp   { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes floatY   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        @keyframes shimmerH { 0%{background-position:-200% center} 100%{background-position:200% center} }
+        @keyframes ripple   { 0%{transform:scale(0.8);opacity:1} 100%{transform:scale(2.2);opacity:0} }
+        @keyframes scan     { 0%{top:-2px} 100%{top:102%} }
+        @keyframes slideUp  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        .a1{animation:fadeUp 0.7s ease 0.00s both}
+        .a2{animation:fadeUp 0.7s ease 0.12s both}
+        .a3{animation:fadeUp 0.7s ease 0.24s both}
+        .a4{animation:fadeUp 0.7s ease 0.38s both}
+        .a5{animation:fadeUp 0.7s ease 0.52s both}
+        .a6{animation:fadeUp 0.7s ease 0.66s both}
+        .float{animation:floatY 4s ease-in-out infinite}
+        .shine{background:linear-gradient(90deg,#00FFD1,#4DB8FF,#A78BFA,#00FFD1);background-size:300% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmerH 4s linear infinite}
+        .gtext{background:linear-gradient(135deg,#00FFD1,#4DB8FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .btna{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;transition:all 0.3s;text-decoration:none;font-family:inherit;font-weight:800;background:linear-gradient(135deg,#00C9A7,#0B6FCC);color:white;border-radius:100px;box-shadow:0 0 28px rgba(0,201,167,0.35),0 6px 20px rgba(0,0,0,0.3)}
+        .btna:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 0 44px rgba(0,201,167,0.55)}
+        .btna:active{transform:scale(0.97)}
+        .btnb{display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:all 0.3s;text-decoration:none;font-family:inherit;font-weight:700;background:rgba(0,255,209,0.05);color:#00FFD1;border-radius:100px;border:1.5px solid rgba(0,255,209,0.28)}
+        .btnb:hover{background:rgba(0,255,209,0.1);border-color:rgba(0,255,209,0.65)}
+        .gc{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:20px;transition:all 0.35s}
+        .gc:hover{background:rgba(0,255,209,0.05);border-color:rgba(0,255,209,0.2);transform:translateY(-6px);box-shadow:0 24px 48px rgba(0,0,0,0.4)}
+        .tc{background:rgba(0,255,209,0.04);border:1px solid rgba(0,255,209,0.14);border-radius:18px;transition:all 0.3s}
+        .tc:hover{background:rgba(0,255,209,0.08);transform:translateY(-3px)}
+        .sp{display:flex;flex-direction:column;align-items:center;gap:5px;padding:13px 10px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);min-width:72px;cursor:pointer;transition:all 0.25s;text-decoration:none;flex-shrink:0}
+        .sp:hover{background:rgba(0,255,209,0.08);border-color:rgba(0,255,209,0.3);transform:scale(1.07)}
+        .sb{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;text-align:center;padding:16px 6px;transition:all 0.3s}
+        .sb:hover{border-color:rgba(0,255,209,0.28)}
+        .livdot{width:8px;height:8px;border-radius:50%;background:#00FFD1;display:inline-block;position:relative}
+        .livdot::after{content:'';position:absolute;inset:-4px;border-radius:50%;background:rgba(0,255,209,0.3);animation:ripple 1.8s infinite}
+        .noscroll::-webkit-scrollbar{display:none}
+        .noscroll{-ms-overflow-style:none;scrollbar-width:none}
+        .hgrid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,255,209,0.035) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,209,0.035) 1px,transparent 1px);background-size:40px 40px;mask-image:radial-gradient(ellipse 80% 70% at 50% 0%,black,transparent);pointer-events:none}
+        .nbadge{width:50px;height:50px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;background:linear-gradient(135deg,rgba(0,255,209,0.18),rgba(77,184,255,0.18));border:1px solid rgba(0,255,209,0.22);color:#00FFD1}
+        .doc-info{transition:opacity 0.5s ease,transform 0.5s ease}
       `}</style>
 
-      {/* HEADER */}
-      <header style={{position:"sticky",top:0,zIndex:100,padding:"14px 24px",background:scrolled?"rgba(2,13,26,.97)":"transparent",backdropFilter:scrolled?"blur(24px)":"none",borderBottom:scrolled?"1px solid rgba(255,255,255,.07)":"none",transition:"all .4s",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#00C9A7,#0B6FCC)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>💊</div>
-          <span style={{fontWeight:900,fontSize:20}} className="shine">DigiDoc</span>
+      <div style={{position:"fixed",top:"5%",left:0,right:0,width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,rgba(0,100,200,0.10),transparent)",pointerEvents:"none",zIndex:0}}/>
+
+      {/* NAVBAR */}
+      <nav style={{position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 20px",background:scrollY>40?"rgba(2,13,26,0.93)":"transparent",backdropFilter:scrollY>40?"blur(24px)":"none",borderBottom:scrollY>40?"1px solid rgba(0,255,209,0.09)":"1px solid transparent",transition:"all 0.4s"}}>
+        <Image src="/logo.png" alt="DigiDoc" width={130} height={44} priority style={{height:33,width:"auto",filter:"brightness(1.1)"}}/>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <Link href="/login" className="btnb" style={{padding:"8px 16px",fontSize:13}}>Sign In</Link>
+          <Link href="/login" className="btna" style={{padding:"9px 18px",fontSize:13}}>Get Started</Link>
         </div>
-        <nav style={{display:"flex",alignItems:"center",gap:8}}>
-          <a href="#features" style={{color:"rgba(232,244,255,.6)",fontSize:13,fontWeight:600,textDecoration:"none",padding:"6px 12px"}} className="hide-mob">Features</a>
-          <a href="#how"      style={{color:"rgba(232,244,255,.6)",fontSize:13,fontWeight:600,textDecoration:"none",padding:"6px 12px"}} className="hide-mob">How it works</a>
-          <a href="#pricing"  style={{color:"rgba(232,244,255,.6)",fontSize:13,fontWeight:600,textDecoration:"none",padding:"6px 12px"}} className="hide-mob">Pricing</a>
-          <a href="/register-doctor" className="btn-o" style={{padding:"8px 14px",fontSize:12}}>For Doctors</a>
-          <a href="/login"            className="btn-p" style={{padding:"9px 18px",fontSize:13}}>Login →</a>
-        </nav>
-      </header>
+      </nav>
 
       {/* HERO */}
-      <section style={{position:"relative",padding:"70px 24px 80px",textAlign:"center",overflow:"hidden"}}>
-        <div className="orb" style={{width:600,height:600,background:"rgba(0,201,167,.07)",top:-250,left:"50%",transform:"translateX(-50%)"}}/>
-        <div className="orb" style={{width:300,height:300,background:"rgba(11,111,204,.1)",bottom:-100,right:-50}}/>
-        <div style={{position:"relative",zIndex:1,maxWidth:620,margin:"0 auto"}}>
-          <div className="tag" style={{marginBottom:22}}><span className="ldot"/>Doctors Available 24/7</div>
-          <h1 style={{fontSize:40,fontWeight:900,lineHeight:1.15,marginBottom:20}}>
-            India ka Sabse<br/><span className="shine">Trusted</span><br/>Telemedicine Platform
-          </h1>
-          <p style={{fontSize:15,color:"rgba(232,244,255,.55)",lineHeight:1.85,marginBottom:32,maxWidth:480,margin:"0 auto 32px"}}>
-            Ghar baithe verified doctors se live video call pe consult karo. E-prescription pao aur medicines ghar pe mangao. Sirf ₹299 se shuru.
-          </p>
-          <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",marginBottom:36}}>
-            <a href="/login"            className="btn-p">🩺 Free Consultation Book Karo</a>
-            <a href="/register-doctor"  className="btn-o">👨‍⚕️ Doctor ke roop mein Join Karo</a>
-          </div>
-          <div style={{display:"flex",gap:16,justifyContent:"center",flexWrap:"wrap"}}>
-            {["🔒 100% Secure","✅ MCI Verified","⚡ 2 Min Connect","💯 Money Back"].map(b=>(
-              <span key={b} style={{fontSize:11,color:"rgba(232,244,255,.4)",fontWeight:600}}>{b}</span>
-            ))}
-          </div>
+      <section style={{position:"relative",padding:"60px 20px 70px",textAlign:"center",zIndex:1,overflow:"hidden"}}>
+        <div className="hgrid"/>
+
+        <div className="a1" style={{display:"inline-flex",alignItems:"center",gap:8,padding:"7px 16px",borderRadius:100,marginBottom:24,background:"rgba(0,255,209,0.08)",border:"1px solid rgba(0,255,209,0.2)"}}>
+          <span className="livdot"/>
+          <span style={{color:"#00FFD1",fontSize:12,fontWeight:700}}>500+ Doctors Online Right Now</span>
         </div>
-        {/* Doctor preview cards */}
-        <div style={{position:"relative",zIndex:1,maxWidth:480,margin:"48px auto 0",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
-          {[{name:"Dr. Priya Sharma",spec:"General Physician",r:"4.9",ic:"👩‍⚕️",on:true},{name:"Dr. Arjun Mehta",spec:"Cardiologist",r:"4.8",ic:"👨‍⚕️",on:true},{name:"Dr. Sneha Rao",spec:"Dermatologist",r:"4.7",ic:"👩‍⚕️",on:false}].map(d=>(
-            <div key={d.name} className="card" style={{padding:14,textAlign:"center"}}>
-              <div style={{width:44,height:44,borderRadius:"50%",background:"rgba(0,255,209,.1)",border:"2px solid rgba(0,255,209,.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,margin:"0 auto 8px",position:"relative"}}>
-                {d.ic}
-                {d.on&&<span style={{position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:"50%",background:"#00FFD1",border:"2px solid #020D1A"}}/>}
+
+        <h1 className="a2" style={{fontSize:40,fontWeight:900,lineHeight:1.1,marginBottom:18,letterSpacing:"-0.8px"}}>
+          The Future of <span className="shine">Healthcare</span>
+          <br/>Is Already Here. 🏥
+        </h1>
+
+        <p className="a3" style={{fontSize:15,color:"rgba(232,244,255,0.6)",lineHeight:1.8,maxWidth:310,margin:"0 auto 34px"}}>
+          Symptoms to doctor match to video call to prescription to medicine delivery.{" "}
+          <span style={{color:"#00FFD1",fontWeight:700}}>One platform. Zero friction.</span>
+        </p>
+
+        <div className="a4" style={{display:"flex",flexDirection:"column",gap:12,maxWidth:300,margin:"0 auto 18px"}}>
+          <Link href="/login" className="btna" style={{fontSize:15,padding:"17px 28px"}}>🩺 Consult a Doctor — Free</Link>
+          <Link href="/register-doctor" className="btnb" style={{fontSize:14,padding:"14px 24px"}}>👨‍⚕️ I am a Doctor — Join DigiDoc</Link>
+        </div>
+
+        <p className="a5" style={{color:"rgba(255,255,255,0.28)",fontSize:12}}>
+          Login with your mobile number · Ready in 10 seconds
+        </p>
+
+        {/* HERO CARD — everything inside, no floating badges */}
+        <div className="a6 float" style={{marginTop:48,display:"inline-block"}}>
+          <div style={{
+            background:"rgba(255,255,255,0.04)",
+            borderRadius:28,
+            border:"1px solid rgba(0,255,209,0.18)",
+            boxShadow:"0 32px 80px rgba(0,0,0,0.5)",
+            backdropFilter:"blur(24px)",
+            width:260,
+            overflow:"hidden",
+            position:"relative"
+          }}>
+            {/* Scan line animation */}
+            <div style={{position:"absolute",left:0,right:0,height:"1px",background:"linear-gradient(90deg,transparent,rgba(0,255,209,0.6),transparent)",animation:"scan 3s ease-in-out infinite",zIndex:2}}/>
+
+            {/* Green top bar */}
+            <div style={{background:"rgba(0,255,209,0.08)",borderBottom:"1px solid rgba(0,255,209,0.15)",padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span className="livdot"/>
+                <span style={{color:"#00FFD1",fontSize:11,fontWeight:700}}>Doctor Found</span>
               </div>
-              <p style={{fontWeight:700,fontSize:9,color:"#E8F4FF",marginBottom:2}}>{d.name}</p>
-              <p style={{fontSize:9,color:"rgba(232,244,255,.4)"}}>{d.spec}</p>
-              <p style={{fontSize:10,color:"#FFB347",marginTop:3}}>⭐ {d.r}</p>
+              <span style={{color:"#4DB8FF",fontSize:11,fontWeight:700}}>Wait: 2 min</span>
             </div>
-          ))}
+
+            {/* Doctor info — rotates every 20s */}
+            <div style={{padding:"20px 20px 0",textAlign:"center"}}>
+              <div style={{fontSize:52,marginBottom:10}}>{doc.emoji}</div>
+
+              {/* Name fades in/out */}
+              <div className="doc-info" style={{opacity:visible?1:0,transform:visible?"translateY(0)":"translateY(8px)",marginBottom:16}}>
+                <p style={{fontWeight:800,color:"#E8F4FF",fontSize:16,marginBottom:4}}>{doc.name}</p>
+                <p style={{color:"#00FFD1",fontSize:12,fontWeight:600}}>{doc.spec} · ⭐ {doc.rating}</p>
+              </div>
+            </div>
+
+            {/* Buttons — inside card, stacked, no overlap */}
+            <div style={{padding:"0 16px 20px",display:"flex",flexDirection:"column",gap:8}}>
+              <div style={{padding:"11px 0",borderRadius:100,textAlign:"center",background:"linear-gradient(135deg,#00C9A7,#0B6FCC)",color:"white",fontSize:13,fontWeight:700}}>
+                📹 Video Call
+              </div>
+              <div style={{padding:"11px 0",borderRadius:100,textAlign:"center",background:"rgba(0,255,209,0.08)",color:"#00FFD1",fontSize:13,fontWeight:700,border:"1px solid rgba(0,255,209,0.25)"}}>
+                📞 Audio Call
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* STATS */}
-      <section style={{padding:"0 24px 60px"}}>
-        <div style={{maxWidth:800,margin:"0 auto",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}} className="grid4">
-          {[{n:"500+",l:"Verified Doctors",c:"#00FFD1",ic:"🩺"},{n:"10K+",l:"Happy Patients",c:"#4DB8FF",ic:"👥"},{n:"4.9★",l:"Avg Rating",c:"#FFB347",ic:"⭐"},{n:"99%",l:"Satisfaction",c:"#A78BFA",ic:"💯"}].map(s=>(
-            <div key={s.l} style={{textAlign:"center",padding:"18px 10px",borderRadius:18,background:`${s.c}10`,border:`1px solid ${s.c}22`}}>
-              <p style={{fontSize:22,marginBottom:4}}>{s.ic}</p>
-              <p style={{fontWeight:900,fontSize:22,color:s.c}}>{s.n}</p>
-              <p style={{fontSize:10,color:"rgba(232,244,255,.4)",marginTop:3,lineHeight:1.4}}>{s.l}</p>
+      <div ref={statsRef} style={{padding:"0 16px 40px",position:"relative",zIndex:1}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+          {[
+            {val:cnt.d+"+",         label:"Verified Doctors", c:"#00FFD1"},
+            {val:Math.floor(cnt.p/1000)+"K+", label:"Patients Served",  c:"#4DB8FF"},
+            {val:"4.9 Stars",       label:"Avg Rating",       c:"#A78BFA"},
+            {val:"~2 min",          label:"Wait Time",        c:"#FB923C"},
+          ].map(s=>(
+            <div key={s.label} className="sb">
+              <p style={{fontWeight:900,fontSize:15,color:s.c}}>{s.val}</p>
+              <p style={{fontSize:9,color:"rgba(232,244,255,0.4)",marginTop:4,lineHeight:1.3}}>{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* HOW IT WORKS */}
+      <section style={{padding:"40px 20px",position:"relative",zIndex:1,background:"rgba(255,255,255,0.015)",borderTop:"1px solid rgba(255,255,255,0.05)",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+        <p style={{textAlign:"center",color:"#00FFD1",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:3,marginBottom:8}}>The Process</p>
+        <h2 style={{textAlign:"center",fontSize:24,fontWeight:800,marginBottom:6}}>How DigiDoc Works</h2>
+        <p style={{textAlign:"center",color:"rgba(232,244,255,0.45)",fontSize:13,marginBottom:28}}>From symptoms to solution in 4 steps</p>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {STEPS.map(s=>(
+            <div key={s.n} className="tc" style={{display:"flex",alignItems:"center",gap:14,padding:"16px 18px"}}>
+              <div className="nbadge">{s.n}</div>
+              <div>
+                <p style={{fontWeight:700,fontSize:14,color:"#E8F4FF"}}>{s.icon} {s.title}</p>
+                <p style={{color:"rgba(232,244,255,0.45)",fontSize:12,marginTop:3}}>{s.sub}</p>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
-      <section id="how" style={{padding:"60px 24px",background:"rgba(255,255,255,.01)"}}>
-        <div style={{maxWidth:600,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:40}}>
-            <div className="tag" style={{marginBottom:12}}>Simple Process</div>
-            <h2 style={{fontSize:28,fontWeight:900,marginBottom:10}}>Kaise Kaam Karta Hai <span className="shine2">DigiDoc?</span></h2>
-            <p style={{color:"rgba(232,244,255,.45)",fontSize:14,lineHeight:1.7}}>Sirf 2 minute mein doctor se connect ho jao</p>
-          </div>
-          <div style={{position:"relative"}}>
-            {[{ic:"📱",t:"Register Karo",d:"Mobile number se signup karo. OTP verify karo. Poora ek minute nahi lagega."},{ic:"🩺",t:"Doctor Chuno",d:"Apni bimari ke according specialty choose karo. Saare doctors online hain."},{ic:"📹",t:"Video Call Karo",d:"Ek tap mein doctor se live video ya audio call pe connect ho jao."},{ic:"💊",t:"Prescription Pao",d:"Doctor digital prescription bhejega seedha aapke phone pe instantly."},{ic:"🏠",t:"Medicines Order Karo",d:"Prescription ke saath medicines order karo. Ghar pe delivery milegi."},{ic:"✅",t:"Swasth Raho",d:"Follow-up calls free hain. Aapki health hamesha hamare saath safe hai."}].map((s,i)=>(
-              <div key={i} style={{display:"flex",gap:16,alignItems:"flex-start",marginBottom:28,position:"relative"}}>
-                {i<5&&<div style={{position:"absolute",left:19,top:44,bottom:-10,width:2,background:"linear-gradient(to bottom,rgba(0,255,209,.3),rgba(0,255,209,0))"}}/>}
-                <div className="step-num">{s.ic}</div>
-                <div style={{flex:1,paddingTop:4}}>
-                  <p style={{fontWeight:800,fontSize:15,color:"#E8F4FF",marginBottom:4}}>{s.t}</p>
-                  <p style={{color:"rgba(232,244,255,.5)",fontSize:13,lineHeight:1.7}}>{s.d}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* FEATURES */}
-      <section id="features" style={{padding:"60px 24px"}}>
-        <div style={{maxWidth:800,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:36}}>
-            <div className="tag" style={{marginBottom:12}}>Why DigiDoc</div>
-            <h2 style={{fontSize:28,fontWeight:900,marginBottom:8}}>Kyun Chunte Hain Log <span className="shine2">DigiDoc?</span></h2>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}} className="grid2">
-            {[{ic:"📹",t:"Live HD Video Call",d:"Crystal clear video calls on any network. Doctor aapka chehra dekh ke diagnose karta hai."},{ic:"🩺",t:"Verified Doctors Only",d:"Har doctor MCI registered aur background verified hai. Fake doctors ka koi chance nahi."},{ic:"💊",t:"Digital Prescription",d:"Valid e-prescription instantly phone pe. Kisi bhi registered chemist pe use karo."},{ic:"🚀",t:"2 Min Connect",d:"Average wait sirf 2 minutes. Emergency mein bhi doctor available rahega."},{ic:"🔒",t:"100% Private & Secure",d:"End-to-end encrypted calls. Data kabhi share nahi hoga. HIPAA compliant."},{ic:"💰",t:"Affordable Pricing",d:"₹299 se shuru. Koi hidden charges nahi. Consultation ke baad pay karo."},{ic:"📱",t:"Koi bhi Device pe Chalaye",d:"Mobile, tablet, laptop — browser pe kaam karta hai. App download ki zaroorat nahi."},{ic:"⚡",t:"24/7 Available",d:"Raat ke 3 baje bhi doctor available. Sundays aur holidays pe bhi."},{ic:"🏥",t:"12+ Specialties",d:"General Physician se Cardiologist tak, Dermatologist se Pediatrician tak sab available."},{ic:"📋",t:"Medical Records",d:"Saari prescriptions aur consultation history ek jagah. Kabhi bhi access karo."},{ic:"🚚",t:"Medicine Delivery",d:"Prescription ke baad seedha medicines order karo. 24-48 hrs mein delivery milegi."},{ic:"🌟",t:"Free Follow-up",d:"Consultation ke 24 ghante baad follow-up call bilkul free hai."}].map(f=>(
-              <div key={f.t} className="card" style={{padding:18}}>
-                <span style={{fontSize:28,display:"block",marginBottom:10}}>{f.ic}</span>
-                <p style={{fontWeight:700,fontSize:13,color:"#E8F4FF",marginBottom:5}}>{f.t}</p>
-                <p style={{color:"rgba(232,244,255,.45)",fontSize:12,lineHeight:1.6}}>{f.d}</p>
-              </div>
-            ))}
-          </div>
+      <section style={{padding:"44px 20px",position:"relative",zIndex:1}}>
+        <p style={{textAlign:"center",color:"#00FFD1",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:3,marginBottom:8}}>Why DigiDoc</p>
+        <h2 style={{textAlign:"center",fontSize:24,fontWeight:800,marginBottom:6}}>Built Different. Built for You.</h2>
+        <p style={{textAlign:"center",color:"rgba(232,244,255,0.45)",fontSize:13,marginBottom:28}}>No other platform does all of this.</p>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          {FEATURES.map(f=>(
+            <div key={f.title} className="gc" style={{padding:"20px 16px"}}>
+              <div style={{width:44,height:44,borderRadius:13,marginBottom:12,background:f.color+"14",border:"1px solid "+f.color+"28",display:"flex",alignItems:"center",justifyContent:"center",fontSize:21}}>{f.icon}</div>
+              <p style={{fontWeight:700,fontSize:12,color:"#E8F4FF",marginBottom:7,lineHeight:1.3}}>{f.title}</p>
+              <p style={{fontSize:11,color:"rgba(232,244,255,0.45)",lineHeight:1.7}}>{f.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* SPECIALTIES */}
-      <section style={{padding:"60px 0",background:"rgba(255,255,255,.01)"}}>
-        <div style={{maxWidth:800,margin:"0 auto",padding:"0 24px"}}>
-          <div style={{textAlign:"center",marginBottom:28}}>
-            <div className="tag" style={{marginBottom:12}}>12+ Specialties</div>
-            <h2 style={{fontSize:28,fontWeight:900}}>Kaunsi <span className="shine2">Specialty</span> Chahiye?</h2>
-          </div>
-        </div>
-        <div style={{display:"flex",gap:10,overflowX:"auto",padding:"0 24px 12px",WebkitOverflowScrolling:"touch"}}>
-          {[{ic:"🫀",l:"Cardiology"},{ic:"🧠",l:"Neurology"},{ic:"🦴",l:"Orthopedics"},{ic:"👁️",l:"Ophthalmology"},{ic:"👶",l:"Pediatrics"},{ic:"🦷",l:"Dental"},{ic:"🧬",l:"Dermatology"},{ic:"💊",l:"General"},{ic:"🤰",l:"Gynecology"},{ic:"🫁",l:"Pulmonology"},{ic:"🧪",l:"Pathology"},{ic:"🏋️",l:"Sports Med"},{ic:"🧓",l:"Geriatrics"},{ic:"🧠",l:"Psychiatry"},{ic:"🦻",l:"ENT"}].map(s=>(
-            <a key={s.l} href="/login" className="chip" style={{flexShrink:0}}>
-              <span style={{fontSize:16}}>{s.ic}</span>{s.l}
-            </a>
+      <section style={{padding:"38px 0",borderTop:"1px solid rgba(255,255,255,0.05)",borderBottom:"1px solid rgba(255,255,255,0.05)",background:"rgba(255,255,255,0.01)",position:"relative",zIndex:1}}>
+        <p style={{textAlign:"center",color:"#00FFD1",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:3,marginBottom:8}}>Our Doctors</p>
+        <h2 style={{textAlign:"center",fontSize:22,fontWeight:800,marginBottom:6,padding:"0 20px"}}>12+ Specialties</h2>
+        <p style={{textAlign:"center",color:"rgba(232,244,255,0.45)",fontSize:13,marginBottom:22,padding:"0 20px"}}>All MCI-verified. All experienced. All available.</p>
+        <div style={{display:"flex",gap:10,overflowX:"auto",padding:"4px 20px 8px"}} className="noscroll">
+          {SPECS.map(s=>(
+            <Link href="/login" key={s.name} className="sp">
+              <span style={{fontSize:24}}>{s.icon}</span>
+              <span style={{fontSize:10,fontWeight:600,color:"rgba(232,244,255,0.65)",textAlign:"center",lineHeight:1.3}}>{s.name}</span>
+            </Link>
           ))}
         </div>
       </section>
 
       {/* TESTIMONIALS */}
-      <section style={{padding:"60px 24px"}}>
-        <div style={{maxWidth:800,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:36}}>
-            <div className="tag" style={{marginBottom:12}}>Real Reviews</div>
-            <h2 style={{fontSize:28,fontWeight:900}}>Logon Ka <span className="shine2">Experience</span></h2>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}} className="grid2">
-            {[{name:"Rahul Verma",city:"Mumbai",t:"Raat 2 baje fever tha, doctor ne 5 min mein call ki aur prescription di. Kamaal hai! Pehle emergency pe jaata tha."},{name:"Priya Singh",city:"Delhi",t:"Pregnancy mein doctor ke paas jaana mushkil tha. DigiDoc ne bahut help ki. Gynecologist se ghar pe baat ki."},{name:"Amit Kumar",city:"Bangalore",t:"Cardiologist se ghar pe appointment lena impossible tha. DigiDoc pe instantly call kiya. Amazing service!"},{name:"Sunita Devi",city:"Jaipur",t:"Bache ko raat ko doctor dikhana tha. DigiDoc pe pediatrician se seedha baat ki. Highly recommend!"}].map(t=>(
-              <div key={t.name} className="testi">
-                <div style={{display:"flex",gap:3,marginBottom:10}}>
-                  {Array(5).fill(0).map((_,i)=><span key={i} style={{color:"#FFB347",fontSize:13}}>★</span>)}
-                </div>
-                <p style={{color:"rgba(232,244,255,.65)",fontSize:12,lineHeight:1.7,marginBottom:12,fontStyle:"italic"}}>"{t.t}"</p>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#00C9A7,#0B6FCC)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#fff"}}>{t.name[0]}</div>
-                  <div>
-                    <p style={{fontWeight:700,fontSize:12,color:"#E8F4FF"}}>{t.name}</p>
-                    <p style={{fontSize:10,color:"rgba(232,244,255,.35)"}}>{t.city}</p>
-                  </div>
+      <section style={{padding:"44px 20px",position:"relative",zIndex:1}}>
+        <p style={{textAlign:"center",color:"#00FFD1",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:3,marginBottom:8}}>Real Stories</p>
+        <h2 style={{textAlign:"center",fontSize:22,fontWeight:800,marginBottom:24}}>Patients Love DigiDoc</h2>
+        <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(0,255,209,0.11)",borderRadius:22,padding:26}}>
+          {REVIEWS.map((r,i)=>(
+            <div key={i} style={{display:i===rev?"block":"none",animation:i===rev?"slideUp 0.5s ease":"none"}}>
+              <div style={{display:"flex",gap:2,marginBottom:14}}>
+                {Array.from({length:5}).map((_,j)=><span key={j} style={{color:"#FFB347",fontSize:17}}>★</span>)}
+              </div>
+              <p style={{color:"rgba(232,244,255,0.82)",fontSize:14,lineHeight:1.8,marginBottom:18,fontStyle:"italic"}}>"{r.text}"</p>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:42,height:42,borderRadius:"50%",background:"rgba(0,255,209,0.08)",border:"1px solid rgba(0,255,209,0.18)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{r.avatar}</div>
+                <div>
+                  <p style={{fontWeight:700,fontSize:13,color:"#E8F4FF"}}>{r.name}</p>
+                  <p style={{fontSize:11,color:"rgba(232,244,255,0.38)"}}>{r.city}</p>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* PRICING */}
-      <section id="pricing" style={{padding:"60px 24px",background:"rgba(255,255,255,.01)"}}>
-        <div style={{maxWidth:700,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:36}}>
-            <div className="tag" style={{marginBottom:12}}>Transparent Pricing</div>
-            <h2 style={{fontSize:28,fontWeight:900,marginBottom:8}}>Simple <span className="shine2">Pricing</span></h2>
-            <p style={{color:"rgba(232,244,255,.45)",fontSize:14}}>Koi hidden charges nahi. Jo dikhta hai wahi lagta hai.</p>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}} className="grid3">
-            {[{name:"Basic",price:"₹299",per:"per consult",ic:"💊",features:["General Physician","15 min call","Digital Prescription","Chat Support"],pop:false},{name:"Standard",price:"₹499",per:"per consult",ic:"🩺",features:["Specialist Doctor","30 min call","Digital Prescription","Free Follow-up","Priority Queue"],pop:true},{name:"Family",price:"₹999",per:"per month",ic:"👨‍👩‍👧",features:["Unlimited Consults","All Specialties","4 Family Members","Medicine Discounts","24/7 Priority"],pop:false}].map(p=>(
-              <div key={p.name} className={`pcard${p.pop?" pop":""}`}>
-                {p.pop&&<div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",padding:"3px 14px",borderRadius:100,background:"linear-gradient(135deg,#00C9A7,#0B6FCC)",fontSize:10,fontWeight:700,color:"#fff",whiteSpace:"nowrap"}}>Most Popular</div>}
-                <span style={{fontSize:28,display:"block",marginBottom:10}}>{p.ic}</span>
-                <p style={{fontWeight:800,fontSize:13,color:"#E8F4FF",marginBottom:4}}>{p.name}</p>
-                <p style={{fontWeight:900,fontSize:24,color:p.pop?"#00FFD1":"#E8F4FF"}}>{p.price}</p>
-                <p style={{fontSize:10,color:"rgba(232,244,255,.35)",marginBottom:14}}>{p.per}</p>
-                {p.features.map(f=>(<p key={f} style={{color:"rgba(232,244,255,.55)",fontSize:11,marginBottom:6}}><span style={{color:"#00FFD1",marginRight:6}}>✓</span>{f}</p>))}
-                <a href="/login" className={p.pop?"btn-p":"btn-o"} style={{display:"flex",marginTop:14,padding:"11px",fontSize:12}}>Book Now</a>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FOR DOCTORS */}
-      <section style={{padding:"60px 24px"}}>
-        <div style={{maxWidth:700,margin:"0 auto"}}>
-          <div style={{background:"linear-gradient(135deg,rgba(77,184,255,.1),rgba(11,111,204,.15))",border:"1px solid rgba(77,184,255,.25)",borderRadius:24,padding:"32px 24px"}}>
-            <div className="tag" style={{marginBottom:16,background:"rgba(77,184,255,.1)",borderColor:"rgba(77,184,255,.25)",color:"#4DB8FF"}}>For Doctors</div>
-            <h2 style={{fontSize:24,fontWeight:900,marginBottom:16}}>Ghar Se Karo<br/><span className="shine2">₹30K–₹1.5L/Month</span></h2>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:24}} className="grid2">
-              {[{ic:"💰",t:"High Earnings",d:"Apni fee khud set karo. ₹299–₹999 per consult"},{ic:"🕐",t:"Flexible Hours",d:"Jab chaaho kaam karo. Part-time ya full-time"},{ic:"⚡",t:"Instant Patients",d:"Approval ke baad immediately patients milenge"},{ic:"💳",t:"Fast Payouts",d:"Weekly payout seedha bank account mein"},{ic:"🛡️",t:"MCI Compliant",d:"Govt. Telemedicine Guidelines 2020 follow karte hain"},{ic:"📱",t:"Easy Platform",d:"Simple dashboard. Koi technical knowledge nahi chahiye"}].map(b=>(
-                <div key={b.t} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-                  <span style={{fontSize:20,flexShrink:0}}>{b.ic}</span>
-                  <div><p style={{fontWeight:700,fontSize:13,color:"#E8F4FF"}}>{b.t}</p><p style={{fontSize:11,color:"rgba(232,244,255,.45)",marginTop:2}}>{b.d}</p></div>
-                </div>
-              ))}
             </div>
-            <a href="/register-doctor" className="btn-p" style={{display:"inline-flex"}}>👨‍⚕️ Doctor ke roop mein Apply Karo →</a>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section style={{padding:"60px 24px",background:"rgba(255,255,255,.01)"}}>
-        <div style={{maxWidth:700,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:36}}>
-            <div className="tag" style={{marginBottom:12}}>FAQ</div>
-            <h2 style={{fontSize:28,fontWeight:900}}>Aksar Pooche Jaane Wale <span className="shine2">Sawaal</span></h2>
-          </div>
-          {[{q:"Kya DigiDoc ke doctors verified hain?",a:"Haan. Har doctor MCI (Medical Council of India) registration ke saath verify kiya jata hai. Fake doctors ka koi chance nahi hai."},{q:"Meri health information safe rahegi?",a:"100%. Saari consultations end-to-end encrypted hain. Aapka data kabhi bhi kisi third party ke saath share nahi kiya jata."},{q:"Ek consultation kitne ka hai?",a:"General physician ke liye ₹299 se shuru. Specialist ₹499 se. Fee doctor ke profile pe clearly show hoti hai — koi hidden charges nahi."},{q:"Agar doctor call accept nahi karta toh?",a:"5 minute mein doctor join nahi kiya toh full refund milega. No questions asked."},{q:"Kya yeh India mein legal hai?",a:"Bilkul. DigiDoc Government of India ki Telemedicine Practice Guidelines 2020 ke according fully compliant hai."},{q:"Prescription valid hai kya?",a:"Haan. DigiDoc ki e-prescriptions legally valid hain. Kisi bhi registered pharmacy pe use kar sakte ho."},{q:"Internet slow hai toh kya audio call ho sakta hai?",a:"Bilkul! Video nahi banta toh audio call ka option hai. Low bandwidth pe bhi achhe se kaam karta hai."},{q:"Kya family ke liye bhi use kar sakte hain?",a:"Haan! Family plan mein 4 members ke liye unlimited consultations milti hain sirf ₹999/month mein."}].map((f,i)=>(
-            <details key={i} className="faq-item">
-              <summary style={{padding:"16px 20px",fontWeight:700,fontSize:14,color:"#E8F4FF",cursor:"pointer",listStyle:"none",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                {f.q}<span style={{color:"#00FFD1",fontSize:20,flexShrink:0,marginLeft:12}}>+</span>
-              </summary>
-              <p style={{padding:"0 20px 16px",color:"rgba(232,244,255,.55)",fontSize:13,lineHeight:1.7}}>{f.a}</p>
-            </details>
           ))}
+          <div style={{display:"flex",justifyContent:"center",gap:8,marginTop:18}}>
+            {[0,1,2].map(i=>(
+              <div key={i} onClick={()=>setRev(i)} style={{width:i===rev?22:8,height:8,borderRadius:100,cursor:"pointer",background:i===rev?"#00FFD1":"rgba(255,255,255,0.14)",transition:"all 0.35s"}}/>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section style={{padding:"60px 24px"}}>
-        <div style={{maxWidth:600,margin:"0 auto"}}>
-          <div style={{background:"linear-gradient(135deg,rgba(0,201,167,.12),rgba(11,111,204,.18))",border:"1px solid rgba(0,255,209,.25)",borderRadius:28,padding:"44px 28px",textAlign:"center",position:"relative",overflow:"hidden"}}>
-            <div className="orb" style={{width:300,height:300,background:"rgba(0,255,209,.06)",top:-150,left:"50%",transform:"translateX(-50%)"}}/>
-            <div style={{position:"relative",zIndex:1}}>
-              <div style={{fontSize:48,marginBottom:16}}>🚀</div>
-              <h2 style={{fontSize:28,fontWeight:900,marginBottom:12}}>Aaj Hi Shuru Karo!</h2>
-              <p style={{color:"rgba(232,244,255,.5)",fontSize:14,lineHeight:1.8,marginBottom:28}}>Pehli consultation bilkul free hai.<br/>No credit card. No subscription. Register karo aur doctor se baat karo.</p>
-              <a href="/login" className="btn-p" style={{display:"inline-flex",padding:"16px 36px",fontSize:16}}>🩺 Free Mein Start Karo</a>
-              <p style={{color:"rgba(232,244,255,.3)",fontSize:11,marginTop:14}}>10,000+ patients already use kar rahe hain DigiDoc ko</p>
-            </div>
+      {/* TRUST */}
+      <section style={{margin:"0 16px 28px",borderRadius:26,padding:"34px 22px",position:"relative",zIndex:1,background:"linear-gradient(135deg,rgba(11,111,204,0.22),rgba(0,201,167,0.16))",border:"1px solid rgba(0,255,209,0.14)"}}>
+        <div style={{textAlign:"center"}}>
+          <p style={{fontSize:38,marginBottom:12}}>🛡️</p>
+          <h2 style={{color:"#E8F4FF",fontSize:20,fontWeight:800,marginBottom:10}}>Safe. Secure. Private.</h2>
+          <p style={{color:"rgba(232,244,255,0.6)",fontSize:13,lineHeight:1.8,marginBottom:20}}>
+            Every doctor is MCI-registered and verified. Your data is encrypted. Your consultations are private.
+          </p>
+          <div style={{display:"flex",justifyContent:"center",flexWrap:"wrap",gap:8}}>
+            {["MCI Verified","Encrypted","Made in India","HIPAA Compliant"].map(b=>(
+              <span key={b} style={{padding:"6px 13px",borderRadius:100,background:"rgba(0,255,209,0.07)",color:"#00FFD1",fontSize:11,fontWeight:600,border:"1px solid rgba(0,255,209,0.18)"}}>{b}</span>
+            ))}
           </div>
         </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section style={{padding:"52px 20px 60px",textAlign:"center",position:"relative",zIndex:1}}>
+        <p style={{fontSize:50,marginBottom:14}}>⚡</p>
+        <h2 style={{fontSize:30,fontWeight:900,marginBottom:12,letterSpacing:"-0.5px",lineHeight:1.15}}>
+          Your Health Cannot Wait.
+          <br/><span className="gtext">Neither Can We.</span>
+        </h2>
+        <p style={{color:"rgba(232,244,255,0.5)",fontSize:14,marginBottom:30,lineHeight:1.8}}>
+          Login with your mobile number.<br/>Be talking to a doctor in under 2 minutes.
+        </p>
+        <Link href="/login" className="btna" style={{fontSize:16,padding:"19px 32px",display:"inline-flex",marginBottom:14}}>
+          🩺 Talk to a Doctor Now — Free
+        </Link>
+        <p style={{color:"rgba(255,255,255,0.22)",fontSize:12,marginTop:8}}>Trusted by 50,000+ patients across India</p>
       </section>
 
       {/* FOOTER */}
-      <footer style={{padding:"48px 24px 32px",borderTop:"1px solid rgba(255,255,255,.07)"}}>
-        <div style={{maxWidth:800,margin:"0 auto"}}>
-          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:28,marginBottom:36}} className="grid2">
-            <div>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-                <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#00C9A7,#0B6FCC)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>💊</div>
-                <span style={{fontWeight:900,fontSize:18}} className="shine">DigiDoc</span>
-              </div>
-              <p style={{color:"rgba(232,244,255,.4)",fontSize:12,lineHeight:1.7,maxWidth:220,marginBottom:12}}>India ka sabse trusted telemedicine platform. Ghar baithe doctor se milo.</p>
-              <p style={{color:"rgba(232,244,255,.3)",fontSize:12}}>🌐 pmcare.org</p>
-              <p style={{color:"rgba(232,244,255,.3)",fontSize:12,marginTop:4}}>📧 support@pmcare.org</p>
-              <p style={{color:"rgba(232,244,255,.3)",fontSize:12,marginTop:4}}>📱 +91 99999 99999</p>
-            </div>
-            <div>
-              <p style={{fontWeight:700,fontSize:13,color:"#E8F4FF",marginBottom:14}}>Patients</p>
-              {[["Consult Doctor","/login"],["Find Specialist","/login"],["Order Medicines","/login"],["My Records","/dashboard"],["Prescriptions","/dashboard"]].map(([l,h])=>(<a key={l} href={h} className="fl">{l}</a>))}
-            </div>
-            <div>
-              <p style={{fontWeight:700,fontSize:13,color:"#E8F4FF",marginBottom:14}}>Doctors</p>
-              {[["Join DigiDoc","/register-doctor"],["Doctor Login","/login"],["My Dashboard","/doctor/dashboard"],["Earnings","/doctor/dashboard"],["Support","/support"]].map(([l,h])=>(<a key={l} href={h} className="fl">{l}</a>))}
-            </div>
-            <div>
-              <p style={{fontWeight:700,fontSize:13,color:"#E8F4FF",marginBottom:14}}>Company</p>
-              {[["About Us","/about"],["Privacy Policy","/privacy"],["Terms of Service","/terms"],["Contact Us","/support"],["Admin Login","/admin/login"]].map(([l,h])=>(<a key={l} href={h} className="fl">{l}</a>))}
-            </div>
-          </div>
-          <div style={{borderTop:"1px solid rgba(255,255,255,.06)",paddingTop:20,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
-            <p style={{color:"rgba(232,244,255,.25)",fontSize:12}}>© 2026 DigiDoc (pmcare.org) · All rights reserved</p>
-            <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
-              {["🏥 NABH Compliant","🔒 SSL Secured","📋 MCI Registered","⚖️ Govt. Compliant"].map(b=>(<span key={b} style={{color:"rgba(232,244,255,.25)",fontSize:10,fontWeight:600}}>{b}</span>))}
-            </div>
-          </div>
+      <footer style={{padding:"26px 20px",borderTop:"1px solid rgba(255,255,255,0.06)",textAlign:"center",position:"relative",zIndex:1}}>
+        <Image src="/logo.png" alt="DigiDoc" width={110} height={36} style={{height:29,width:"auto",margin:"0 auto 10px",display:"block",filter:"brightness(1.2)"}}/>
+        <p style={{color:"rgba(255,255,255,0.28)",fontSize:12,marginBottom:16}}>Doctor Anywhere Anytime</p>
+        <div style={{display:"flex",justifyContent:"center",flexWrap:"wrap",gap:18,marginBottom:14}}>
+          {[["About","/about"],["Privacy","/privacy"],["Terms","/terms"],["For Doctors","/register-doctor"],["Contact","/contact"]].map(([l,h])=>(
+            <Link key={l} href={h} style={{color:"rgba(255,255,255,0.32)",fontSize:12,textDecoration:"none"}}>{l}</Link>
+          ))}
         </div>
+        <p style={{color:"rgba(255,255,255,0.14)",fontSize:11}}>2026 DigiDoc. All rights reserved. Made with love in India</p>
       </footer>
-    </div>
+    </main>
   );
 }
