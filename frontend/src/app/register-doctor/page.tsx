@@ -209,7 +209,7 @@ export default function RegisterDoctorPage() {
         await fetch(`${API}/auth/send-otp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mobile: form.mobile, role: "doctor", ...payload }),
+          body: JSON.stringify({ role: "doctor", ...payload }),
         });
       } catch {}
 
