@@ -61,13 +61,13 @@ export default function NotFound() {
       alignItems: "center", justifyContent: "center",
       background: "#020D1A", fontFamily: "'Plus Jakarta Sans',sans-serif",
       color: "#E8F4FF", padding: "28px 24px", textAlign: "center",
-      maxWidth: 480, margin: "0 auto", left: "50%", transform: "translateX(-50%)",
+      maxWidth: 480, margin: "0 auto", left:0, right:0,
     }}>
       <style>{S}</style>
       <div className="hgrid" />
 
       {/* Glow */}
-      <div style={{ position: "fixed", top: "30%", left: "50%", transform: "translateX(-50%)", width: 350, height: 350, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,100,200,0.08),transparent)", pointerEvents: "none" }} />
+      <div style={{ position: "fixed", top: "30%", left:0, right:0, width: 350, height: 350, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,100,200,0.08),transparent)", pointerEvents: "none" }} />
 
       {/* 404 graphic */}
       <div className="a1 float" style={{ marginBottom: 24, position: "relative" }}>

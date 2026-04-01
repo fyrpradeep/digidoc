@@ -37,7 +37,7 @@ export default function PharmaLogin() {
   };
 
   return (
-    <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#020D1A",fontFamily:"'Plus Jakarta Sans',sans-serif",color:"#E8F4FF",padding:"28px 24px",maxWidth:480,margin:"0 auto",left:"50%",transform:"translateX(-50%)"}}>
+    <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#020D1A",fontFamily:"'Plus Jakarta Sans',sans-serif",color:"#E8F4FF",padding:"28px 24px",maxWidth:480,margin:"0 auto",left:0,right:0}}>
       <style>{S}</style>
       <div style={{width:"100%",maxWidth:340}}>
         <div style={{textAlign:"center",marginBottom:28}}>

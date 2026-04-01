@@ -95,12 +95,12 @@ export default function AdminLoginPage() {
       position: "fixed", inset: 0, display: "flex", flexDirection: "column",
       background: "#020D1A", fontFamily: "'Plus Jakarta Sans',sans-serif",
       color: "#E8F4FF", maxWidth: 480, margin: "0 auto",
-      left: "50%", transform: "translateX(-50%)",
+      left:0, right:0,
     }}>
       <style>{S}</style>
 
       {/* BG */}
-      <div style={{ position: "fixed", top: "5%", left: "50%", transform: "translateX(-50%)", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,100,200,0.10),transparent)", pointerEvents: "none", zIndex: 0 }} />
+      <div style={{ position: "fixed", top: "5%", left:0, right:0, width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,100,200,0.10),transparent)", pointerEvents: "none", zIndex: 0 }} />
       <div style={{ position: "fixed", bottom: "5%", right: "-10%", width: 280, height: 280, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,255,209,0.05),transparent)", pointerEvents: "none", zIndex: 0 }} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 24px", position: "relative", zIndex: 1, overflowY: "auto" }}>

@@ -94,7 +94,7 @@ export default function PatientDashboard() {
   const firstName   = displayName.split(" ")[0];
 
   return (
-    <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:"#020D1A",fontFamily:"'Plus Jakarta Sans',sans-serif",color:"#E8F4FF",maxWidth:480,margin:"0 auto",left:"50%",transform:"translateX(-50%)"}}>
+    <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:"#020D1A",fontFamily:"'Plus Jakarta Sans',sans-serif",color:"#E8F4FF",maxWidth:480,margin:"0 auto",left:0,right:0}}>
       <style>{S}</style>
 
       {/* HEADER */}

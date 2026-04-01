@@ -10,8 +10,7 @@ const font = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: "DigiDoc — Doctor Anywhere, Anytime",
-  description: "Consult verified doctors online. Get prescriptions & medicines delivered.",
-  manifest: "/manifest.json",
+  description: "Consult verified doctors online. Prescriptions & medicines delivered.",
   icons: { icon: "/favicon.ico" },
 };
 
@@ -25,8 +24,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={font.className} style={{ background: "#020D1A" }}>
+    <html lang="en" style={{ height: "100%", background: "#020D1A" }}>
+      <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      </head>
+      <body className={font.className}
+        style={{ height: "100%", background: "#020D1A", overflow: "hidden" }}>
         {children}
       </body>
     </html>

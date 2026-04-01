@@ -97,7 +97,7 @@ export default function CallPage() {
   const handleEnd = () => { endCall(); router.push("/dashboard"); };
 
   return (
-    <div style={{position:"fixed",inset:0,background:"#020D1A",fontFamily:"'Plus Jakarta Sans',sans-serif",color:"#E8F4FF",maxWidth:480,margin:"0 auto",left:"50%",transform:"translateX(-50%)",display:"flex",flexDirection:"column"}}>
+    <div style={{position:"fixed",inset:0,background:"#020D1A",fontFamily:"'Plus Jakarta Sans',sans-serif",color:"#E8F4FF",maxWidth:480,margin:"0 auto",left:0,right:0,display:"flex",flexDirection:"column"}}>
       <style>{S}</style>
 
       {/* ── INCOMING CALL (Doctor side) ── */}

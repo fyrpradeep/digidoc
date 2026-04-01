@@ -94,7 +94,7 @@ export default function AboutPage() {
       <style>{S}</style>
 
       {/* BG GLOW */}
-      <div style={{ position: "fixed", top: "5%", left: "50%", transform: "translateX(-50%)", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,100,200,0.08),transparent)", pointerEvents: "none", zIndex: 0 }} />
+      <div style={{ position: "fixed", top: "5%", left:0, right:0, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,100,200,0.08),transparent)", pointerEvents: "none", zIndex: 0 }} />
 
       {/* NAVBAR */}
       <nav style={{ position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 20px", background: scrollY > 30 ? "rgba(2,13,26,0.93)" : "transparent", backdropFilter: scrollY > 30 ? "blur(24px)" : "none", borderBottom: scrollY > 30 ? "1px solid rgba(0,255,209,0.09)" : "1px solid transparent", transition: "all 0.4s" }}>

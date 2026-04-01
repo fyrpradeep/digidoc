@@ -205,9 +205,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:"#020D1A",fontFamily:"'Plus Jakarta Sans',sans-serif",color:"#E8F4FF",maxWidth:480,margin:"0 auto",left:"50%",transform:"translateX(-50%)"}}>
+    <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:"#020D1A",fontFamily:"'Plus Jakarta Sans',sans-serif",color:"#E8F4FF",maxWidth:480,margin:"0 auto",left:0,right:0}}>
       <style>{S}</style>
-      <div style={{position:"fixed",top:"10%",left:"50%",transform:"translateX(-50%)",width:360,height:360,borderRadius:"50%",background:"radial-gradient(circle,rgba(0,100,200,0.09),transparent)",pointerEvents:"none"}}/>
+      <div style={{position:"fixed",top:"10%",left:0,right:0,width:360,height:360,borderRadius:"50%",background:"radial-gradient(circle,rgba(0,100,200,0.09),transparent)",pointerEvents:"none"}}/>
 
       <div style={{flex:1,overflowY:"auto",padding:"28px 24px"}} className="noscroll">
 
