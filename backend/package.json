@@ -1,46 +1,8 @@
 {
-  "name": "pmcare-backend",
+  "name": "pmcare",
   "version": "1.0.0",
   "scripts": {
-    "build": "nest build",
-    "start": "node dist/main",
-    "start:dev": "nest start --watch",
-    "start:prod": "node dist/main"
-  },
-  "dependencies": {
-    "@nestjs/common": "^10.0.0",
-    "@nestjs/core": "^10.0.0",
-    "@nestjs/config": "^3.0.0",
-    "@nestjs/jwt": "^10.1.0",
-    "@nestjs/mongoose": "^10.0.1",
-    "@nestjs/passport": "^10.0.0",
-    "@nestjs/platform-express": "^10.0.0",
-    "@nestjs/platform-socket.io": "^10.0.0",
-    "@nestjs/websockets": "^10.0.0",
-    "@nestjs/throttler": "^5.0.0",
-    "agora-access-token": "^2.0.4",
-    "bcryptjs": "^2.4.3",
-    "class-transformer": "^0.5.1",
-    "class-validator": "^0.14.0",
-    "mongoose": "^7.5.0",
-    "passport": "^0.6.0",
-    "passport-google-oauth20": "^2.0.0",
-    "passport-jwt": "^4.0.1",
-    "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.8.1",
-    "socket.io": "^4.7.1",
-    "razorpay": "^2.9.2",
-    "pdfkit": "^0.14.0",
-    "nodemailer": "^6.9.4",
-    "multer": "^1.4.5-lts.1"
-  },
-  "devDependencies": {
-    "@nestjs/cli": "^10.0.0",
-    "@nestjs/schematics": "^10.0.0",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/multer": "^1.4.11",
-    "@types/node": "^20.3.1",
-    "@types/passport-google-oauth20": "^2.0.14",
-    "typescript": "^5.1.3"
+    "build": "cd backend && npm install && npm run build",
+    "start": "cd backend && node dist/main"
   }
 }
