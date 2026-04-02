@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
-import { NotificationsService }    from './notifications.service';
 import { NotificationsController } from './notifications.controller';
-
+import { NotificationsService } from './notifications.service';
+import { Notification, NotificationSchema } from './schemas/notification.schema';
 @Module({
-  imports:     [JwtModule],
-  controllers: [NotificationsController],
-  providers:   [NotificationsService],
-  exports:     [NotificationsService],
+  imports: [MongooseModule.forFeature([{name:Notification.name,schema:NotificationSchema}]),JwtModule.register({secret:process.env.JWT_SECRET||'pmcare'})],
+  controllers: [NotificationsController], providers: [NotificationsService], exports: [NotificationsService],
 })
 export class NotificationsModule {}

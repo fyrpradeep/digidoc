@@ -1,44 +1,63 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { OrdersService } from '../orders/orders.service';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Payment } from './schemas/payment.schema';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class PaymentsService {
-  constructor(
-    private config: ConfigService,
-    private ordersService: OrdersService,
-  ) {}
+  constructor(@InjectModel(Payment.name) private model: Model<Payment>) {}
 
-  // ── TODO: Razorpay integration ────────────────────────────────────
-  // When key is ready:
-  // 1. npm install razorpay
-  // 2. const Razorpay = require('razorpay');
-  // 3. const razorpay = new Razorpay({ key_id: this.config.get('RAZORPAY_KEY_ID'), key_secret: this.config.get('RAZORPAY_SECRET') });
-  // ─────────────────────────────────────────────────────────────────
+  async createRazorpayOrder(amount: number, type: string, patientId: string, refId: string) {
+    const keyId     = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
-  async createOrder(amount: number, currency = 'INR') {
-    // TODO: Replace with real Razorpay order creation
-    // const order = await razorpay.orders.create({ amount: amount * 100, currency, receipt: `receipt_${Date.now()}` });
-    // return order;
+    if (!keyId || keyId === 'PLACEHOLDER_ADD_WHEN_READY')
+      throw new BadRequestException('Razorpay not configured yet');
 
-    // Mock response for development
-    return {
-      id:       `order_mock_${Date.now()}`,
-      amount:   amount * 100,
+    const Razorpay = require('razorpay');
+    const rzp = new Razorpay({ key_id: keyId, key_secret: keySecret });
+
+    const order = await rzp.orders.create({
+      amount:   amount * 100, // paise
       currency: 'INR',
-      status:   'created',
-    };
+      receipt:  `pmcare_${Date.now()}`,
+    });
+
+    // Save pending payment
+    await this.model.create({
+      patientId,
+      amount,
+      type,
+      razorpayOrderId: order.id,
+      status: 'pending',
+      ...(type === 'medicine' ? { orderId: refId } : { consultationId: refId }),
+    });
+
+    return { orderId: order.id, amount, currency: 'INR', keyId };
   }
 
-  async verifyPayment(orderId: string, paymentId: string, signature: string) {
-    // TODO: Verify Razorpay signature
-    // const crypto = require('crypto');
-    // const body   = orderId + '|' + paymentId;
-    // const expected = crypto.createHmac('sha256', this.config.get('RAZORPAY_SECRET')).update(body).digest('hex');
-    // if (expected !== signature) throw new BadRequestException('Invalid payment signature');
+  async verifyPayment(razorpayOrderId: string, razorpayPaymentId: string, signature: string) {
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+    const expected  = crypto.createHmac('sha256', keySecret)
+      .update(`${razorpayOrderId}|${razorpayPaymentId}`).digest('hex');
 
-    // Update order payment status
-    await this.ordersService.updatePayment(orderId, paymentId);
-    return { success: true, paymentId };
+    if (expected !== signature) throw new BadRequestException('Payment verification failed');
+
+    await this.model.updateOne(
+      { razorpayOrderId },
+      { razorpayPaymentId, razorpaySignature: signature, status: 'success' }
+    );
+    return { success: true };
+  }
+
+  findAll()               { return this.model.find().sort({ createdAt: -1 }).lean(); }
+  findByPatient(id:string){ return this.model.find({ patientId:id }).sort({ createdAt:-1 }).lean(); }
+  async getRevenue() {
+    const res = await this.model.aggregate([
+      { $match: { status: 'success' } },
+      { $group: { _id: '$type', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+    ]);
+    return res;
   }
 }

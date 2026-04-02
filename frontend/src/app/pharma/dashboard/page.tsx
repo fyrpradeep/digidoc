@@ -1,142 +1,54 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-const ORDERS = [
-  { id:"ORD-9941", patient:"Rahul Verma",  phone:"+91 9999999999", rx:"RX-2041", amount:3838, items:[{name:"Paracetamol 500mg",qty:10,price:350},{name:"Cetirizine 10mg",qty:7,price:315},{name:"Vitamin C 1000mg",qty:10,price:1500},{name:"Amoxicillin 500mg",qty:15,price:1800}], address:"42 Shanti Nagar, Indore MP 452001", status:"pending",    date:"31 Mar", time:"11:35 AM" },
-  { id:"ORD-9940", patient:"Seema Joshi",  phone:"+91 9888888888", rx:"RX-2040", amount:745,  items:[{name:"Metformin 500mg",qty:20,price:400},{name:"Atorvastatin 10mg",qty:10,price:345}], address:"12 MG Road, Indore", status:"packed",     date:"31 Mar", time:"9:20 AM"  },
-  { id:"ORD-9939", patient:"Aditya Kumar", phone:"+91 9777777777", rx:"RX-2039", amount:1290, items:[{name:"Azithromycin 500mg",qty:3,price:540},{name:"Ibuprofen 400mg",qty:15,price:825}], address:"78 Vijay Nagar, Indore", status:"dispatched", date:"30 Mar", time:"2:10 PM", tracking:"DGD-TRK-88410"  },
-];
-
-const S = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0;}
-  html,body{height:100%;overflow:hidden;}
-  @keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes shimmerH{0%{background-position:-200% center}100%{background-position:200% center}}
-  @keyframes ripple{0%{transform:scale(0.8);opacity:1}100%{transform:scale(2.2);opacity:0}}
-  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
-  .shine{background:linear-gradient(90deg,#A78BFA,#4DB8FF,#A78BFA);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmerH 3s linear infinite}
-  .gc{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:14px;margin-bottom:11px;transition:all 0.3s}
-  .bm{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;border-radius:11px;font-family:inherit;font-weight:700;font-size:12px;color:white;border:none;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,#A78BFA,#4DB8FF)}
-  .bm:hover{filter:brightness(1.1)}
-  .bg{display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 13px;border-radius:11px;font-family:inherit;font-weight:600;font-size:11px;color:#A78BFA;border:1px solid rgba(167,139,250,0.22);background:rgba(167,139,250,0.06);cursor:pointer;transition:all 0.2s}
-  .bg:hover{background:rgba(167,139,250,0.12)}
-  .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:100px;font-size:10px;font-weight:700}
-  .livdot{width:7px;height:7px;border-radius:50%;background:#A78BFA;display:inline-block;animation:blink 1.5s infinite}
-  .inp{width:100%;padding:9px 12px;border-radius:10px;font-family:inherit;font-size:12px;outline:none;background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.08);color:#E8F4FF;transition:all 0.3s}
-  .inp:focus{border-color:rgba(167,139,250,0.4)}
-  .noscroll::-webkit-scrollbar{display:none}
-  .noscroll{-ms-overflow-style:none;scrollbar-width:none}
-`;
-
-type Status = "pending"|"packed"|"dispatched";
-const statusColor = (s:Status|string) => s==="dispatched"?"#00FFD1":s==="packed"?"#FFB347":"#A78BFA";
-
-export default function PharmaDashboard() {
-  const router = useRouter();
-  const [orders, setOrders] = useState(ORDERS);
-  const [filter, setFilter] = useState("all");
-  const [trackInputs, setTrackInputs] = useState<Record<string,string>>({});
-
-  const packOrder     = (id:string) => setOrders(p=>p.map(o=>o.id===id?{...o,status:"packed"}:o));
-  const dispatchOrder = (id:string) => {
-    const tr = trackInputs[id]||"DGD-TRK-"+Math.floor(10000+Math.random()*90000);
-    setOrders(p=>p.map(o=>o.id===id?{...o,status:"dispatched",tracking:tr}:o));
-  };
-
-  const filtered = filter==="all"?orders:orders.filter(o=>o.status===filter);
-  const pending   = orders.filter(o=>o.status==="pending").length;
-
-  return (
-    <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:"#020D1A",fontFamily:"'Plus Jakarta Sans',sans-serif",color:"#E8F4FF",maxWidth:480,margin:"0 auto",left:0,right:0}}>
-      <style>{S}</style>
-
-      {/* HEADER */}
-      <div style={{flexShrink:0,padding:"13px 18px 12px",background:"rgba(2,13,26,0.97)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-          <div>
-            <p style={{color:"rgba(232,244,255,0.4)",fontSize:10}}>Pharma Portal</p>
-            <h2 style={{fontSize:16,fontWeight:800}} className="shine">Medicine Orders</h2>
+import { apiGet, apiPut, apiPost, getRole, clearAuth } from "@/lib/api";
+const S=`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;overflow:hidden}@keyframes sh{0%{background-position:-200% center}to{background-position:200% center}}@keyframes spin{to{transform:rotate(360deg)}}.sh2{background:linear-gradient(90deg,#F59E0B,#D97706,#F59E0B);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:sh 3s linear infinite}.card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px;margin-bottom:11px}.btn-p{display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;border-radius:11px;font-weight:700;font-size:12px;color:#fff;border:none;cursor:pointer;background:linear-gradient(135deg,#F59E0B,#D97706);font-family:inherit}.inp{width:100%;padding:10px 12px;border-radius:10px;font-size:12px;outline:none;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);color:#E8F4FF;font-family:inherit}.sp{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.2);border-top-color:#F59E0B;border-radius:50%;animation:spin .8s linear infinite}.ni{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0;cursor:pointer;border:none;background:none;font-family:inherit;flex:1;border-top:2px solid transparent}.ni.on{border-top-color:#F59E0B}.ns::-webkit-scrollbar{display:none}.ns{-ms-overflow-style:none;scrollbar-width:none}`;
+export default function PharmaDashboard(){
+  const router=useRouter();const [tab,setTab]=useState<"orders"|"inventory">("orders");const [orders,setOrders]=useState<any[]>([]);const [meds,setMeds]=useState<any[]>([]);const [loading,setLoading]=useState(true);const [dispatching,setDispatching]=useState<string>("");
+  useEffect(()=>{if(getRole()!=="pharma"){router.replace("/pharma/login");return;}Promise.all([apiGet("/orders?status=pending").catch(()=>[]),apiGet("/medicines").catch(()=>[])]).then(([o,m])=>{if(Array.isArray(o))setOrders(o);if(Array.isArray(m))setMeds(m);}).finally(()=>setLoading(false));});
+  const dispatch=async(id:string)=>{setDispatching(id);await apiPut(`/orders/${id}/dispatch`,{tracking:`PHARMA-${Date.now()}`}).catch(()=>{});setOrders(p=>p.filter(x=>x._id!==id));setDispatching("");};
+  const updateStock=async(id:string,qty:number)=>{await apiPut(`/medicines/${id}/stock`,{qty}).catch(()=>{});setMeds(p=>p.map(x=>x._id===id?{...x,stock:Math.max(0,x.stock+qty)}:x));};
+  return(<div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:"#020D1A",fontFamily:"'Plus Jakarta Sans',sans-serif",color:"#E8F4FF"}}>
+    <style>{S}</style>
+    <div style={{flexShrink:0,padding:"13px 18px",background:"rgba(2,13,26,.97)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,.06)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div><p style={{color:"rgba(232,244,255,.4)",fontSize:10}}>Pharma Portal</p><h2 style={{fontSize:16,fontWeight:800}} className="sh2">PMCare Pharmacy</h2></div>
+      <button onClick={()=>{clearAuth();router.replace("/pharma/login");}} style={{padding:"6px 12px",borderRadius:10,background:"rgba(255,107,107,.08)",border:"1px solid rgba(255,107,107,.2)",color:"#FF6B6B",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Exit</button>
+    </div>
+    <div className="ns" style={{flex:1,overflowY:"auto",padding:"0 18px"}}>
+      {tab==="orders"&&(<div style={{paddingTop:14,paddingBottom:14}}>
+        <p style={{fontSize:10,fontWeight:700,color:"rgba(232,244,255,.35)",textTransform:"uppercase",letterSpacing:1,marginBottom:12}}>Pending Orders ({orders.length})</p>
+        {loading&&<div style={{display:"flex",justifyContent:"center",padding:"28px"}}><span className="sp"/></div>}
+        {!loading&&orders.length===0&&<div style={{textAlign:"center",padding:"32px"}}><p style={{fontSize:36,marginBottom:8}}>✅</p><p style={{color:"rgba(232,244,255,.38)",fontSize:13}}>Sab orders dispatch ho gaye!</p></div>}
+        {orders.map((o:any)=>(<div key={o._id} className="card">
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+            <div><p style={{fontWeight:700,fontSize:13,color:"#E8F4FF"}}>{o._id?.slice(-8)?.toUpperCase()}</p><p style={{color:"rgba(232,244,255,.4)",fontSize:10,marginTop:1}}>{o.patientName}</p><p style={{color:"rgba(232,244,255,.3)",fontSize:10}}>📍 {o.address?.line1}, {o.address?.city}</p></div>
+            <p style={{color:"#F59E0B",fontWeight:800,fontSize:14}}>₹{o.total}</p>
+          </div>
+          <div style={{marginBottom:8}}>{(o.items||[]).map((i:any,idx:number)=>(<p key={idx} style={{color:"rgba(232,244,255,.5)",fontSize:11,marginBottom:3}}>• {i.name} × {i.qty}</p>))}</div>
+          <button className="btn-p" style={{width:"100%"}} onClick={()=>dispatch(o._id)} disabled={dispatching===o._id}>{dispatching===o._id?"Dispatching...":"🚚 Mark Dispatched"}</button>
+        </div>))}
+      </div>)}
+      {tab==="inventory"&&(<div style={{paddingTop:14,paddingBottom:14}}>
+        <p style={{fontSize:10,fontWeight:700,color:"rgba(232,244,255,.35)",textTransform:"uppercase",letterSpacing:1,marginBottom:12}}>Medicine Inventory</p>
+        {meds.filter(m=>m.isActive!==false).sort((a:any,b:any)=>a.stock-b.stock).map((m:any)=>(<div key={m._id} className="card">
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+            <div><p style={{fontWeight:700,fontSize:13,color:"#E8F4FF",marginBottom:2}}>{m.name}</p><p style={{color:"rgba(232,244,255,.4)",fontSize:10}}>{m.brand} · {m.category}</p></div>
+            <span style={{fontWeight:800,fontSize:14,color:m.stock===0?"#FF6B6B":m.stock<10?"#FFB347":"#00FFD1"}}>{m.stock===0?"Out":"Stock: "+m.stock}</span>
           </div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            {pending>0&&<div style={{display:"flex",alignItems:"center",gap:5,padding:"5px 11px",borderRadius:100,background:"rgba(167,139,250,0.1)",border:"1px solid rgba(167,139,250,0.2)"}}>
-              <span className="livdot"/>
-              <span style={{color:"#A78BFA",fontSize:11,fontWeight:700}}>{pending} new</span>
-            </div>}
-            <button onClick={()=>router.push("/pharma/login")} style={{padding:"6px 11px",borderRadius:10,background:"rgba(255,107,107,0.08)",border:"1px solid rgba(255,107,107,0.18)",color:"#FF6B6B",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Logout</button>
+            <button onClick={()=>updateStock(m._id,-1)} style={{width:30,height:30,borderRadius:"50%",background:"rgba(255,255,255,.06)",border:"none",cursor:"pointer",fontSize:16,color:"#E8F4FF"}} disabled={m.stock===0}>−</button>
+            <div style={{flex:1,height:6,borderRadius:100,background:"rgba(255,255,255,.08)",overflow:"hidden"}}><div style={{height:"100%",borderRadius:100,background:m.stock===0?"#FF6B6B":m.stock<10?"#FFB347":"#00FFD1",width:`${Math.min(100,(m.stock/100)*100)}%`}}/></div>
+            <button onClick={()=>updateStock(m._id,10)} style={{width:30,height:30,borderRadius:"50%",background:"linear-gradient(135deg,#F59E0B,#D97706)",border:"none",cursor:"pointer",fontSize:14,color:"#fff"}}>+10</button>
           </div>
-        </div>
-        {/* Stats */}
-        <div style={{display:"flex",gap:8}}>
-          {[{n:orders.length,l:"Total",c:"#A78BFA"},{n:orders.filter(o=>o.status==="pending").length,l:"Pending",c:"#FF6B6B"},{n:orders.filter(o=>o.status==="packed").length,l:"Packed",c:"#FFB347"},{n:orders.filter(o=>o.status==="dispatched").length,l:"Sent",c:"#00FFD1"}].map(s=>(
-            <div key={s.l} style={{flex:1,textAlign:"center",padding:"7px 4px",borderRadius:10,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}>
-              <p style={{fontWeight:800,fontSize:16,color:s.c}}>{s.n}</p>
-              <p style={{fontSize:9,color:"rgba(232,244,255,0.35)",marginTop:1}}>{s.l}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* CONTENT */}
-      <div style={{flex:1,overflowY:"auto",padding:"12px 18px"}} className="noscroll">
-        {/* Filters */}
-        <div style={{display:"flex",gap:7,marginBottom:14,overflowX:"auto"}} className="noscroll">
-          {["all","pending","packed","dispatched"].map(f=>(
-            <button key={f} onClick={()=>setFilter(f)} style={{padding:"5px 13px",borderRadius:100,flexShrink:0,cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600,background:filter===f?"linear-gradient(135deg,#A78BFA,#4DB8FF)":"rgba(255,255,255,0.04)",color:filter===f?"white":"rgba(232,244,255,0.45)",border:filter===f?"none":"1px solid rgba(255,255,255,0.08)",textTransform:"capitalize"}}>
-              {f==="all"?"All Orders":f==="pending"?"⚡ New Orders":f==="packed"?"📦 Packed":f==="dispatched"?"🚚 Dispatched":""}
-            </button>
-          ))}
-        </div>
-
-        {filtered.map(o=>(
-          <div key={o.id} className="gc" style={{borderColor:o.status==="pending"?"rgba(167,139,250,0.2)":"rgba(255,255,255,0.07)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-              <div>
-                <p style={{fontWeight:700,fontSize:14,color:"#E8F4FF"}}>{o.id}</p>
-                <p style={{color:"rgba(232,244,255,0.4)",fontSize:11,marginTop:1}}>{o.patient} · {o.phone}</p>
-                <p style={{color:"rgba(232,244,255,0.3)",fontSize:10,marginTop:1}}>{o.date} {o.time} · Rx: {o.rx}</p>
-              </div>
-              <div style={{textAlign:"right"}}>
-                <p style={{color:"#A78BFA",fontWeight:800,fontSize:14}}>₹{o.amount}</p>
-                <span className="badge" style={{background:statusColor(o.status)+"18",color:statusColor(o.status),marginTop:3,display:"inline-flex"}}>
-                  {o.status==="pending"?"⚡ New":o.status==="packed"?"📦 Packed":"🚚 Dispatched"}
-                </span>
-              </div>
-            </div>
-
-            {/* Items */}
-            <div style={{background:"rgba(255,255,255,0.02)",borderRadius:10,padding:"8px 11px",marginBottom:10}}>
-              {o.items.map((item,i)=>(
-                <div key={i} style={{display:"flex",justifyContent:"space-between",marginBottom:i<o.items.length-1?4:0}}>
-                  <p style={{color:"rgba(232,244,255,0.6)",fontSize:11}}>{item.name} × {item.qty}</p>
-                  <p style={{color:"#A78BFA",fontSize:11,fontWeight:600}}>₹{item.price}</p>
-                </div>
-              ))}
-            </div>
-
-            <p style={{color:"rgba(232,244,255,0.35)",fontSize:10,marginBottom:8}}>📍 {o.address}</p>
-
-            {/* Actions */}
-            {o.status==="pending"&&(
-              <button className="bm" style={{width:"100%"}} onClick={()=>packOrder(o.id)}>📦 Mark as Packed</button>
-            )}
-            {o.status==="packed"&&(
-              <div>
-                <input className="inp" style={{marginBottom:8}} placeholder="Tracking number (optional)"
-                  value={trackInputs[o.id]||""} onChange={e=>setTrackInputs(p=>({...p,[o.id]:e.target.value}))}/>
-                <button className="bm" style={{width:"100%"}} onClick={()=>dispatchOrder(o.id)}>🚚 Dispatch to Customer</button>
-              </div>
-            )}
-            {o.status==="dispatched"&&(
-              <div style={{background:"rgba(0,255,209,0.06)",border:"1px solid rgba(0,255,209,0.15)",borderRadius:10,padding:"9px 12px",display:"flex",justifyContent:"space-between"}}>
-                <span style={{color:"rgba(232,244,255,0.4)",fontSize:11}}>Tracking:</span>
-                <span style={{color:"#00FFD1",fontWeight:700,fontSize:11}}>{(o as any).tracking}</span>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+        </div>))}
+      </div>)}
     </div>
-  );
+    <div style={{flexShrink:0,display:"flex",background:"rgba(2,13,26,.97)",backdropFilter:"blur(24px)",borderTop:"1px solid rgba(255,255,255,.07)"}}>
+      {[["orders","📦","Orders"],["inventory","💊","Inventory"]].map(([t,ic,lb])=>(
+        <button key={t} className={"ni"+(tab===t?" on":"")} onClick={()=>setTab(t as any)} style={{color:tab===t?"#F59E0B":"rgba(232,244,255,.3)"}}>
+          <span style={{fontSize:19}}>{ic}</span><span style={{fontSize:9,fontWeight:tab===t?700:500}}>{lb}</span>
+        </button>
+      ))}
+    </div>
+  </div>);
 }

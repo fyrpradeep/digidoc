@@ -1,13 +1,11 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
-import { AppointmentEntity }      from './appointment.entity';
 import { AppointmentsController } from './appointments.controller';
-import { AppointmentsService }    from './appointments.service';
+import { AppointmentsService } from './appointments.service';
+import { Appointment, AppointmentSchema } from './schemas/appointment.schema';
 @Module({
-  imports: [TypeOrmModule.forFeature([AppointmentEntity]), JwtModule],
-  controllers: [AppointmentsController],
-  providers:   [AppointmentsService],
-  exports:     [AppointmentsService],
+  imports: [MongooseModule.forFeature([{name:Appointment.name,schema:AppointmentSchema}]),JwtModule.register({secret:process.env.JWT_SECRET||'pmcare'})],
+  controllers: [AppointmentsController], providers: [AppointmentsService], exports: [AppointmentsService],
 })
 export class AppointmentsModule {}

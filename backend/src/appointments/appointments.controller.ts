@@ -1,17 +1,15 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Request } from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
-import { JwtGuard }    from '../common/guards/jwt.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { JwtService } from '@nestjs/jwt';
 @Controller('appointments')
-@UseGuards(JwtGuard)
 export class AppointmentsController {
-  constructor(private svc: AppointmentsService) {}
-  @Post()    create(@Body() b: any, @CurrentUser() u: any) { return this.svc.create({ ...b, patientId: u.sub }); }
-  @Get('my') getMy(@CurrentUser() u: any) {
-    if (u.role === 'doctor') return this.svc.findByDoctor(u.sub);
-    return this.svc.findByPatient(u.sub);
-  }
-  @Get(':id')       getOne(@Param('id') id: string) { return this.svc.findOne(id); }
-  @Put(':id/start') start(@Param('id') id: string) { return this.svc.start(id); }
-  @Put(':id/end')   end(@Param('id') id: string)   { return this.svc.end(id); }
+  constructor(private svc: AppointmentsService, private jwt: JwtService) {}
+  private uid(req:any) { try{return this.jwt.verify(req.headers?.authorization?.split(' ')[1],{secret:process.env.JWT_SECRET});}catch{return null;} }
+  @Post()        create(@Body() b:any)                                   { return this.svc.create(b); }
+  @Get()         findAll()                                               { return this.svc.findAll(); }
+  @Get('my')     findMy(@Request() r:any)                                { const p=this.uid(r);return p?this.svc.findByPatient(p.sub):[]; }
+  @Get('doctor') findDr(@Request() r:any)                                { const p=this.uid(r);return p?this.svc.findByDoctor(p.sub):[]; }
+  @Get(':id')    findOne(@Param('id') id:string)                         { return this.svc.findById(id); }
+  @Put(':id')    update(@Param('id') id:string,@Body() b:any)            { return this.svc.update(id,b); }
+  @Put(':id/cancel') cancel(@Param('id') id:string,@Body() b:{reason:string}) { return this.svc.cancel(id,b.reason); }
 }

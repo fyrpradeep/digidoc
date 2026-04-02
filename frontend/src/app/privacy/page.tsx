@@ -1,168 +1,30 @@
 "use client";
-import Image from "next/image";
-import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-
-const SECTIONS = [
-  {
-    id: "collect", icon: "📋", title: "Information We Collect",
-    items: [
-      { h: "Personal Information",   t: "Name, mobile number, email address, date of birth, and location — required to create and manage your account." },
-      { h: "Health Information",     t: "Symptoms, medical history, prescriptions, allergies, and existing conditions — used solely to provide healthcare services." },
-      { h: "Usage Data",             t: "Pages visited, features used, and time spent — used to improve DigiDoc for everyone." },
-      { h: "Device Information",     t: "Device type, OS, IP address, and browser type — collected for security and fraud prevention only." },
-    ]
-  },
-  {
-    id: "use", icon: "🎯", title: "How We Use Your Information",
-    items: [
-      { h: "Healthcare Services",    t: "To connect you with doctors, generate prescriptions, process orders, and provide AI-powered health recommendations." },
-      { h: "Platform Improvement",   t: "Anonymised, aggregated usage data helps us improve features and fix bugs." },
-      { h: "Communication",          t: "Appointment reminders, order updates, and OTPs. Manage notification preferences in your profile." },
-      { h: "Legal Compliance",       t: "To comply with applicable laws, resolve disputes, and enforce our agreements." },
-    ]
-  },
-  {
-    id: "share", icon: "🤝", title: "How We Share Your Information",
-    items: [
-      { h: "With Doctors",           t: "Your health info is shared only with the specific doctor you choose to consult. Nothing more." },
-      { h: "Delivery Partners",      t: "For medicine delivery — only your name and address. No health data is ever shared." },
-      { h: "We NEVER Sell Your Data",t: "DigiDoc will never sell, rent, or trade your personal or health data. This is an absolute, unconditional commitment." },
-      { h: "Legal Requirements",     t: "We may disclose information only when required by law or court order." },
-    ]
-  },
-  {
-    id: "security", icon: "🔒", title: "Data Security",
-    items: [
-      { h: "End-to-End Encryption",  t: "All health data is encrypted using AES-256, both in transit and at rest. Unreadable to anyone without authorisation." },
-      { h: "HIPAA Compliance",       t: "DigiDoc is designed to comply with HIPAA standards for healthcare data privacy and security." },
-      { h: "Access Controls",        t: "Only authorised personnel with specific roles can access user data. All access is logged and audited." },
-      { h: "Breach Protocol",        t: "In case of a data breach, we notify affected users within 72 hours as required by law." },
-    ]
-  },
-  {
-    id: "rights", icon: "⚖️", title: "Your Rights",
-    items: [
-      { h: "Access Your Data",       t: "Request a copy of all personal data we hold about you at any time." },
-      { h: "Correct Your Data",      t: "Update or correct your information through profile settings at any time." },
-      { h: "Delete Your Account",    t: "Request permanent deletion by emailing privacy@digidoc.com. Processed within 30 days." },
-      { h: "Data Portability",       t: "Download your health records and prescription history anytime from your profile." },
-    ]
-  },
-  {
-    id: "cookies", icon: "🍪", title: "Cookies",
-    items: [
-      { h: "Essential Cookies",      t: "Required to keep you logged in. Cannot be disabled — they are necessary for the platform to work." },
-      { h: "Analytics Cookies",      t: "Used with your consent to understand usage. You can opt out at any time from settings." },
-      { h: "No Ad Tracking",         t: "DigiDoc does not use advertising cookies. We serve no ads and do not let anyone track you here." },
-    ]
-  },
-];
-
-const S = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0;}
-  html,body{height:100%;overflow:hidden;}
-  @keyframes shimmerH{0%{background-position:-200% center}100%{background-position:200% center}}
-  @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-  .shine{background:linear-gradient(90deg,#00FFD1,#4DB8FF,#00FFD1);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmerH 3s linear infinite}
-  .sec{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;margin-bottom:10px;overflow:hidden;transition:border-color 0.3s}
-  .sec.open{border-color:rgba(0,255,209,0.22)}
-  .sec-hd{width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:none;border:none;cursor:pointer;font-family:inherit;text-align:left;gap:10px;transition:background 0.2s}
-  .sec-hd:hover{background:rgba(0,255,209,0.03)}
-  .sec-body{padding:0 16px 14px;animation:slideDown 0.25s ease}
-  .noscroll::-webkit-scrollbar{display:none}
-  .noscroll{-ms-overflow-style:none;scrollbar-width:none}
-`;
-
-export default function PrivacyPage() {
-  const router  = useRouter();
-  const [open, setOpen] = useState<string | null>("collect");
-
-  return (
-    <div style={{
-      position:"fixed", inset:0, display:"flex", flexDirection:"column",
-      background:"#020D1A", fontFamily:"'Plus Jakarta Sans',sans-serif",
-      color:"#E8F4FF", maxWidth:480, margin:"0 auto",
-      left:"50%", transform:"translateX(-50%)",
-    }}>
-      <style>{S}</style>
-
-      {/* HEADER */}
-      <div style={{ flexShrink:0, padding:"13px 18px 12px", background:"rgba(2,13,26,0.97)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <button onClick={()=>router.back()} style={{ background:"none",border:"none",color:"#00FFD1",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>← Back</button>
-          <div style={{ flex:1 }}>
-            <h2 style={{ fontSize:16,fontWeight:800 }}>Privacy Policy</h2>
-            <p style={{ color:"rgba(232,244,255,0.35)",fontSize:10,marginTop:1 }}>Last updated: 1 April 2026 · Version 2.0</p>
-          </div>
-          <Link href="/terms" style={{ color:"#4DB8FF",fontSize:11,fontWeight:600,textDecoration:"none" }}>Terms →</Link>
+const S=`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;overflow:hidden}@keyframes sh{0%{background-position:-200% center}to{background-position:200% center}}.sh{background:linear-gradient(90deg,#00FFD1,#4DB8FF,#A78BFA,#00FFD1);background-size:300% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:sh 4s linear infinite}.ns::-webkit-scrollbar{display:none}.ns{-ms-overflow-style:none;scrollbar-width:none}`;
+export default function Page(){
+  const pages:Record<string,any>={
+    about:{title:"About PMCare",icon:"🏥",content:[{h:"Our Mission",t:"PMCare ka mission hai India ke har ghar mein quality healthcare pahunchana. Hum believe karte hain ki acchi health service sirf cities mein nahi, balki har jagah available honi chahiye.","},{h:"What We Do",t:"PMCare ek complete telemedicine platform hai jahan patients ghar baithe verified doctors se live video call pe consult kar sakte hain, digital prescription pa sakte hain aur medicines order kar sakte hain."},{h:"Our Doctors",t:"Hamare platform pe sirf MCI-registered aur personally verified doctors hain. Koi bhi unverified doctor patient se consult nahi kar sakta."},{h:"Security & Privacy",t:"Aapka health data 100% safe hai. Saari calls end-to-end encrypted hain. Hum kabhi bhi kisi third party ke saath data share nahi karte."},{h:"Contact Us",t:"Email: support@pmcare.org | Phone: +91 99999 99999 | Website: pmcare.org"}]},
+    privacy:{title:"Privacy Policy",icon:"🔒",content:[{h:"Data We Collect",t:"Hum collect karte hain: naam, mobile number, email, medical history (jo aap share karte hain), consultation records aur payment information."},{h:"How We Use It",t:"Aapka data sirf consultation provide karne ke liye use hota hai. Hum kabhi bhi aapka data sell, share ya misuse nahi karte."},{h:"Data Security",t:"Sab data encrypted hai. Hamare servers industry-standard security protocols follow karte hain including SSL/TLS encryption."},{h:"Your Rights",t:"Aap kabhi bhi apna data delete karne ki request kar sakte hain. Contact karo support@pmcare.org"},{h:"Cookies",t:"Hum sirf essential cookies use karte hain jo login aur session ke liye zaroori hain. Koi tracking cookies nahi."}]},
+    terms:{title:"Terms of Service",icon:"📋",content:[{h:"Acceptance",t:"PMCare use karke aap hamare Terms of Service accept karte hain. Agar aap agree nahi karte toh platform use mat karo."},{h:"Medical Disclaimer",t:"PMCare ek telemedicine platform hai. Yeh emergency medical care replace nahi karta. Emergency mein 108 ya nearest hospital se contact karo."},{h:"Doctor Verification",t:"Hamare saare doctors MCI registered hain. Lekin PMCare specifically kisi treatment outcome ki guarantee nahi deta."},{h:"Payment Policy",t:"Razorpay se secure payments. Consultation ke baad charge hota hai. Refund policy ke liye 24 hrs mein contact karo."},{h:"Prohibited Use",t:"Platform ka misuse, fake accounts banana, doctors ko harass karna, ya koi bhi illegal activity strictly prohibited hai."}]},
+    contact:{title:"Contact Us",icon:"📞",content:[{h:"Customer Support",t:"Email: support@pmcare.org | Available: 9 AM to 9 PM, 7 days a week"},{h:"Phone",t:"+91 99999 99999 | Monday to Saturday: 9 AM - 6 PM"},{h:"Doctor Partnership",t:"doctors@pmcare.org | For doctor onboarding and partnership queries"},{h:"Technical Support",t:"tech@pmcare.org | For app issues, bugs, or technical queries"},{h:"Address",t:"PMCare Healthcare Pvt. Ltd. | India"}]}
+  };
+  const current="privacy";const data=pages[current];
+  return(<div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:"#020D1A",fontFamily:"'Plus Jakarta Sans',sans-serif",color:"#E8F4FF"}}>
+    <style>{S}</style>
+    <div style={{flexShrink:0,padding:"14px 18px",background:"rgba(2,13,26,.97)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,.06)",display:"flex",alignItems:"center",gap:12}}>
+      <a href="/" style={{color:"#00FFD1",fontSize:20,textDecoration:"none"}}>←</a>
+      <h2 style={{fontSize:16,fontWeight:800}} className="sh">{data.icon} {data.title}</h2>
+    </div>
+    <div className="ns" style={{flex:1,overflowY:"auto",padding:"20px 20px 32px"}}>
+      {data.content.map((s:any,i:number)=>(<div key={i} style={{marginBottom:22}}>
+        <h3 style={{fontWeight:700,fontSize:15,color:"#00FFD1",marginBottom:8}}>{s.h}</h3>
+        <p style={{color:"rgba(232,244,255,.6)",fontSize:13,lineHeight:1.8}}>{s.t}</p>
+      </div>))}
+      <div style={{marginTop:24,padding:"14px",borderRadius:13,background:"rgba(0,255,209,.04)",border:"1px solid rgba(0,255,209,.12)",textAlign:"center"}}>
+        <p style={{color:"rgba(232,244,255,.4)",fontSize:12}}>© 2026 PMCare (pmcare.org) · All rights reserved</p>
+        <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:10,flexWrap:"wrap"}}>
+          {[["About","/about"],["Privacy","/privacy"],["Terms","/terms"],["Contact","/contact"]].map(([l,h])=>(<a key={l} href={h} style={{color:"rgba(232,244,255,.35)",fontSize:11,textDecoration:"none"}}>{l}</a>))}
         </div>
-      </div>
-
-      {/* CONTENT */}
-      <div style={{ flex:1, overflowY:"auto", padding:"14px 18px" }} className="noscroll">
-
-        {/* Summary */}
-        <div style={{ background:"rgba(0,255,209,0.05)", border:"1px solid rgba(0,255,209,0.15)", borderRadius:16, padding:"14px 16px", marginBottom:14 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-            <span style={{ fontSize:18 }}>🔒</span>
-            <p style={{ color:"#00FFD1", fontWeight:800, fontSize:13 }}>Our Promise — Plain English</p>
-          </div>
-          {[
-            "We collect only what is needed to provide healthcare.",
-            "We NEVER sell your data to anyone. Ever.",
-            "All health data is encrypted end-to-end (AES-256).",
-            "You can delete your account and all data anytime.",
-            "We are fully HIPAA compliant.",
-          ].map((t,i) => (
-            <div key={i} style={{ display:"flex", gap:8, marginBottom:i<4?6:0 }}>
-              <span style={{ color:"#00FFD1", fontSize:11, flexShrink:0, marginTop:1 }}>✓</span>
-              <p style={{ color:"rgba(232,244,255,0.65)", fontSize:12, lineHeight:1.6 }}>{t}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Accordion */}
-        {SECTIONS.map(s => (
-          <div key={s.id} className={"sec"+(open===s.id?" open":"")}>
-            <button className="sec-hd" onClick={()=>setOpen(open===s.id?null:s.id)}>
-              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <span style={{ fontSize:20 }}>{s.icon}</span>
-                <p style={{ fontWeight:700, fontSize:14, color:"#E8F4FF" }}>{s.title}</p>
-              </div>
-              <span style={{ color:"#00FFD1", fontSize:18, flexShrink:0, display:"block", transition:"transform 0.3s", transform:open===s.id?"rotate(180deg)":"none" }}>⌄</span>
-            </button>
-
-            {open === s.id && (
-              <div className="sec-body">
-                <div style={{ height:1, background:"rgba(255,255,255,0.06)", marginBottom:12 }}/>
-                {s.items.map((item,i) => (
-                  <div key={i} style={{ marginBottom:i<s.items.length-1?12:0 }}>
-                    <p style={{ fontWeight:700, fontSize:12, color:"#00FFD1", marginBottom:3 }}>{item.h}</p>
-                    <p style={{ color:"rgba(232,244,255,0.55)", fontSize:12, lineHeight:1.8 }}>{item.t}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-
-        {/* Contact DPO */}
-        <div style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:"14px 16px", marginTop:6, marginBottom:16 }}>
-          <p style={{ fontWeight:700, fontSize:13, color:"#E8F4FF", marginBottom:6 }}>📧 Privacy Questions?</p>
-          <p style={{ color:"rgba(232,244,255,0.45)", fontSize:12, lineHeight:1.7, marginBottom:6 }}>
-            Contact our Data Protection Officer. We respond within 48 business hours.
-          </p>
-          <p style={{ color:"#4DB8FF", fontSize:12, fontWeight:600 }}>privacy@digidoc.com</p>
-        </div>
-
-        <p style={{ color:"rgba(232,244,255,0.2)", fontSize:11, textAlign:"center", lineHeight:1.7, marginBottom:20 }}>
-          By using DigiDoc you agree to this Privacy Policy.<br/>
-          We will notify you of significant changes via SMS or email.
-        </p>
       </div>
     </div>
-  );
+  </div>);
 }

@@ -1,11 +1,12 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Body, Param, Request } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
-import { JwtGuard } from '../common/guards/jwt.guard';
+import { JwtService } from '@nestjs/jwt';
 @Controller('notifications')
-@UseGuards(JwtGuard)
 export class NotificationsController {
-  constructor(private svc: NotificationsService) {}
-  @Post('sms') sendSms(@Body() b: { mobile: string; message: string }) {
-    return this.svc.sendSms(b.mobile, b.message);
-  }
+  constructor(private svc: NotificationsService, private jwt: JwtService) {}
+  private uid(req:any) { try{return this.jwt.verify(req.headers?.authorization?.split(' ')[1],{secret:process.env.JWT_SECRET});}catch{return null;} }
+  @Get()           findAll(@Request() r:any)              { const p=this.uid(r);return p?this.svc.findByUser(p.sub):[]; }
+  @Get('unread')   unread(@Request() r:any)               { const p=this.uid(r);return p?this.svc.unreadCount(p.sub):0; }
+  @Put(':id/read') markRead(@Param('id') id:string)       { return this.svc.markRead(id); }
+  @Put('read-all') markAll(@Request() r:any)              { const p=this.uid(r);return p?this.svc.markAllRead(p.sub):null; }
 }
